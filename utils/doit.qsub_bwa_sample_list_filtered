@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+# run a subset of the samples
+# using un-compressed fastqi's
+#
+FILTER=$1
+shift 
+LIST=/home/curtish/ics/consults/kimberly/ics223/sample_list
+
+echo "FILTER: $FILTER matches "`grep -c -e "$FILTER" ${LIST}`" in ${LIST}"
+
+cd /scratch/user/curtish/kimberly_lupus/bwa
+grep -e "$FILTER" ${LIST} \
+    | grep -v "^#" \
+    | perl -pe 's/(\.fastq[i]?.gz)/.trim$1/g' \
+    | /home/curtish/ics/xargs/xargs_array \
+    "/home/curtish/ics/consults/kimberly/ics223/qsub_bwa_sam.sh $*"

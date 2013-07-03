@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# email me when qstat shows no jobs for me
+#
+# set up notification for individual jobs - if you want
+# qalter -M $USER@uab.edu -m eas
+#
+FILTER=.
+if [ -n "$1" ]; then FILTER="$1"; shift; fi
+MESSAGE=done
+if [ -n "$2" ]; then MESSAGE="$*"; fi
+
+JOB_COUNT=`qstat -u $USER |  grep -e "$FILTER" | wc -l`
+echo -n "$JOB_COUNT '$FILTER' jobs running @ " ; date
+while [ "$JOB_COUNT" -gt 0 ]; do
+	echo -n "$JOB_COUNT '$FILTER' jobs running @ " ; date
+	# wait 30 seconds before checking again
+        sleep 60
+	JOB_COUNT=`qstat -u $USER | grep -e "$FILTER" | wc -l`
+done
+# email final status
+(echo "cheaha queue done";echo "FILTER: $FILTER"; echo "MESSAGE: $MESSAGE") | mail -s "qstat: cheaha all done $FILTER" $USER@uab.edu
+echo "email sent to $USER@uab.edu"
+

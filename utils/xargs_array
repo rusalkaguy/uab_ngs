@@ -1,0 +1,24 @@
+#!/bin/bash
+#######################################################################
+#
+# xargs_array
+#
+#######################################################################
+#
+if [ $# == 0 ]; then 
+	echo "usage: "`basename $0`" command [in_file]" 
+	echo ""
+	echo "For each line of input, run the given command with that line as arguments."
+	echo ""
+fi
+
+# set up input
+CMD=$1
+if [ $# == 1 ]; then READER="read line"; else READER="read -u $2 line"; fi
+
+# stream the input
+while $READER; do
+	$1 $line
+done
+
+

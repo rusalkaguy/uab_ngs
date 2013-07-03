@@ -1,0 +1,29 @@
+#!/bin/bash
+# 
+# qstat_full_job_names [qstat parameters]
+#
+# 
+# list full jobs names for all specified jobs
+# and various other stats in tab-column format 
+ATTR_LIST="job_name hard usage parallel.environment"
+if [ "$1" == "-j" ]; then
+    # -j job_id [job_ids]
+    shift
+    JOB_ID_LIST="$*"
+else
+    # query for list and extract job id
+     JOB_ID_LIST=`qstat $* | cut -d  " " -f 1 | grep -v "-" `
+fi
+
+# for each job
+for j in $JOB_ID_LIST; do 
+    echo -n "$j	"
+    # get job details
+    TFILE=`mktemp`
+    qstat -j $j > $TFILE
+    # get requested attributes for that job
+    for str in $ATTR_LIST; do
+	echo -n `grep "^$str" $TFILE |  perl -pe 's/:\s+/\t/;' | cut -f 2`"	"
+    done
+    echo ""
+done

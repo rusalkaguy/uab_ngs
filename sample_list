@@ -1,0 +1,3 @@
+# SAMPLE_NAME	RG_ID	RG_LIB	FWD_FASTQ
+# WUSTL demux (novobarcode)
+ATCGAGC_GUY1	C0ELVACXX.LANE6	PREP1	/scratch/user/curtish/project_dir/fastq/guy1_1.fastq.gz
