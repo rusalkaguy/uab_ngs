@@ -5,7 +5,7 @@
 #$ -S /bin/sh
 #$ -cwd
 #$ -V   # need this for parameter passing from MASTER to SLAVE!
-#$ -j y
+#$ -j y # merge stderr into stdout
 # email at:  Begining, End, Abort, Suspend
 #$ -m beas  
 #
