@@ -47,12 +47,13 @@ for fastq in $FILES ; do
     fi
 
     # CSV summary
+    PROG_DIR=`dirname $0`
     CSV_OUT=`basename $fastq $FASTQ_EXT`.csv 
     if [[ ! -e $CSV_OUT && -e $FASTQC_OUT.zip ]]; then  
-	unzip -p $FASTQC_OUT.zip "*/fastqc_data.txt" | ~/ics/fastqc_to_csv/fastqc_to_csv.sh > $CSV_OUT
+	unzip -p $FASTQC_OUT.zip "*/fastqc_data.txt" | $PROG_DIR/fastqc_to_csv.sh > $CSV_OUT
     fi
     if [[ ! -e $CSV_OUT && -e $FASTQC_OUT/fastqc_data.txt ]]; then  
-	~/ics/fastqc_to_csv/fastqc_to_csv.sh $FASTQC_OUT/fastqc_data.txt > $CSV_OUT
+	$PROG_DIR/fastqc_to_csv.sh $FASTQC_OUT/fastqc_data.txt > $CSV_OUT
     fi
 
     # log the completion status
