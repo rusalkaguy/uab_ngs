@@ -3,4 +3,13 @@ pushd  ~/projects/galaxy/galaxy/
 echo >paster.log
 ./run.sh --daemon
 popd
-tail -f  ~/projects/galaxy/galaxy/paster.log| grep -v "DEBUG"
+
+echo "Waiting for galaxy to start..."
+RC=1
+while [ $RC == 1 ]; do
+    echo "."
+    sleep 1
+    grep "^serving on http" paster.log 
+    RC=$?
+done
+    
