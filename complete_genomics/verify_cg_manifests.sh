@@ -50,5 +50,8 @@ fi
 	
 echo "=========================== DONE ==============================="
 
-grep -v sample *.txt | email -V -r vera.dpo.uab.edu -f ${USER}@${HOSTNAME}.ad.uab.edu -n “$0” -s "$PWD completed manifest verification" ${USER}@uab.edu
+(echo "START: $STARTDATE\nEND  : "`date`; grep -v sample *.status.txt) | \
+	email -V -r vera.dpo.uab.edu -f ${USER}@${HOSTNAME}.ad.uab.edu -n “$0” \
+		-s "$PWD completed manifest verification" ${USER}@uab.edu
+
 
