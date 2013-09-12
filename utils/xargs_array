@@ -6,19 +6,26 @@
 #######################################################################
 #
 if [ $# == 0 ]; then 
-	echo "usage: "`basename $0`" command [in_file]" 
+	echo "usage: "`basename $0`" [-in in_file] command [cmd-args...]" 
 	echo ""
 	echo "For each line of input, run the given command with that line as arguments."
 	echo ""
+	echo "By default, reads input from stdin"
 fi
 
-# set up input
-CMD=$1
-if [ $# == 1 ]; then READER="read line"; else READER="read -u $2 line"; fi
+# where input comes from
+if [[ $1 == -i*  ]]; then 
+    # a file
+    READER="read -u $2 line"
+    shift 2
+else 
+    # stdin
+    READER="read line"
+fi
 
 # stream the input
 while $READER; do
-	$1 $line
+	$* $line
 done
 
 
