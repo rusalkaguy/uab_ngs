@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # shared subroutine used by the qsub_* scripts in these subdirectories
 #

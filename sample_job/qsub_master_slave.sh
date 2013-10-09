@@ -1,10 +1,14 @@
 #!/bin/bash
-. ~/uab_ngs/uab_ngs_functions_v1.sh  # load shared run_cmd() & run_step()
+#######################################################################
 #
 # Self-submitting Qsub script.
 # 
 # qsub_master_slave.sh [-debug|-inline] WORK_DIR SAMPLE_NAME INFILE
 #
+########################################################################
+# libraries to load
+. /etc/profile.d/modules.sh          # enable module loading
+. ~/uab_ngs/uab_ngs_functions_v1.sh  # load shared run_cmd() & run_step()
 #*** QSUB FLAGS ***
 #$ -S /bin/bash
 #$ -cwd # remember what dir I'm launched in 
@@ -26,7 +30,6 @@ CMD_LINE_PARAM_LIST="WORK_DIR SAMPLE_NAME INFILE"
 DERIVED_VAR_LIST="CMD_LINE HOSTNAME PROJECT_DIR" 
 
 # load needed modules 
-source /etc/profile.d/modules.sh 2>&1 > /dev/null
 module load ngs-ccts/bwa.0.6.2
 
 
