@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# clear error flag for Eqw jobs
+# usually caused by directory mounting problems.
+#
+# code by Mike Hanby
+for job in $(qstat -u $USER|grep Eqw|awk '{print $1}'); do 
+	qmod -cj $job; 
+done
+
