@@ -1,8 +1,16 @@
 #!/bin/sh 
+########################################################################
 #
-# BWA PE Illumna reads vs an un-indexed FASTA genome
+# BWA SW contigs vs an un-indexed FASTA genome
 # 
-# WARNING: !!!!!NOT RE-ENTRANT!!!!!
+########################################################################
+# libraries to load
+. /etc/profile.d/modules.sh          # enable module loading
+. ~/uab_ngs/uab_ngs_functions_v1.sh  # load shared run_cmd() & run_step()
+# load needed modules 
+module load  ngs-ccts/samtools-0.1.19
+if [ -z "$BWA" ]; then export BWA="/share/apps/ngs-ccts/bwa-0.6.2/bwa"; fi
+#*** QSUB FLAGS ***
 #
 #$ -S /bin/sh
 #$ -cwd
@@ -11,14 +19,6 @@
 # email at:  Begining, End, Abort, Suspend
 #$ -m beas  
 #
-# *** DRMAA resources for BWA ALN ****
-# worked for 85% of kimbley samples
-# -pe smp 4
-# -l vf=1.9G -l h_vmem=2G
-#
-# *** DRMAA resources for BWA SAMPE ONLY ****
-# -l vf=3.9G -l h_vmem=4G
-#
 # ** RUN TIME ** 
 #$ -l h_rt=119:00:00
 #$ -l s_rt=120:55:00
@@ -26,6 +26,7 @@
 # *** output logs ***
 #$ -e jobs/$JOB_NAME.$JOB_ID.err
 #$ -o jobs/$JOB_NAME.$JOB_ID.out
+#*** END QSUB ****
 
 CMD_LINE_PARAM_LIST="WORK_DIR SAMPLE_NAME CONTIG_FASTA REF_FASTA BAM_OUT"
 DERIVED_VAR_LIST="CMD_LINE HOSTNAME PROJECT_DIR DONE_ONLY QSUB_PE_OVERRIDE"
@@ -139,7 +140,6 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
     # --------------------------
     # paths
     # BWA
-    if [ -z "$BWA" ]; then export BWA="/share/apps/ngs-ccts/bwa-0.6.2/bwa"; fi
     export BWA_DIR=`dirname $BWA`
     # get BWA abbreviations 
     export BWA_VER=`$BWA 2>&1 | grep "^Version" | cut -d " " -f 2  | sed -e 's/[.-]/_/g;'`
@@ -149,13 +149,13 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
     export DIR_LIST=
     export JOB_DIR=${WORK_DIR}/jobs		;export DIR_LIST="$DIR_LIST JOB_DIR"
     #export BWA_OUT_DIR=${WORK_DIR}/bwa		;export DIR_LIST="$DIR_LIST BWA_OUT_DIR"
-    for dir in DIR_LIST; do
-	MDIR=`eval echo \$$dir`
+    for dir in $DIR_LIST; do
+	MDIR=`eval echo \\${$dir}`
 	if [ ! -e ${MDIR} ]; then 
 	    run_cmd - mkdir -p $MDIR
 	fi
     done
-
+exit
     # copy script to jobs
     cp $0 $JOB_DIR/`basename $0`.$JOB_NAME.$JOB_ID
 
@@ -167,6 +167,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 	QSUB_NAME=${TASK_NAME}-${SAMPLE_NAME}
 	pushd ${WORK_DIR}
 	qsub -terse \
+	    $QSUB_DRMAA \
 	    -N $QSUB_NAME \
 	    -M $USER@uab.edu \
 	    -e ${JOB_DIR}/${QSUB_NAME}.$$.err.txt \
@@ -251,11 +252,24 @@ if [ -n "$JOB_ID"  ]; then
     cd ${WORK_DIR}
 
     # wordwrap of the reference
-    REF_FASTA_WRAPPED="${REF_FASTA}.w60.fa"
+    export REF_FASTA_WRAPPED="${REF_FASTA}.w60.fa"
     run_step $SAMPLE_NAME $REF_FASTA_WRAPPED "FASTA_formatter(60)" - \
 	fasta_formatter -i $REF_FASTA -w 60 -o $REF_FASTA_WRAPPED
 
+    #
     # BWA Index of Reference
+    #
+
+    # create bwa version index dir
+    export BWA_INDEX_DIR=`dirname ${REF_FASTA}/bwa_${BWA_VER}`
+    mkdir -p ${BWA_INDEX_DIR}
+    
+    # link wrapped reference
+    export REF_LINK=$BWA_INDEX_DIR/`basename $REF_FASTA_WRAPPED`
+    run_step $SAMPLE_NAME $REF_LINK "symlink ref(60)" - \
+	ln -sf $REF_FASTA_WRAPPED $REF_LINK
+    
+    # index with BWA, based on length.
     export BWA_REF_INDEXED=${REF_FASTA_WRAPPED}.bwa${BWA_VER}
     if [ ! -e "${BWA_REF_INDEXED}.bwt" ]; then
 	# decide which indexing option
@@ -271,13 +285,13 @@ if [ -n "$JOB_ID"  ]; then
     fi
     echo "BWA_REF_INDEXED=$BWA_REF_INDEXED"
     run_step $SAMPLE_NAME $BWA_REF_INDEXED.bwt BWA_index_ref_fasta - \
-	bwa index -a $BWA_INDEX_TYPE -p $BWA_REF_INDEXED $REF_FASTA    
+	$BWA index -a $BWA_INDEX_TYPE -p $BWA_REF_INDEXED $REF_FASTA    
 
     # BWA SW alignment
     SAM_ALIGN=$BAM_OUT.aligned.unsorted.sam
     # -r $RG_NAME  (skip RG for now)
     run_step $SAMPLE_NAME $SAM_ALIGN BWA_sw - \
-	bwa bwasw \
+	$BWA bwasw \
 	-f $SAM_ALIGN \
 	$BWA_REF_INDEXED \
 	$CONTIG_FASTA

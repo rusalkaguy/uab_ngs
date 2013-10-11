@@ -1,0 +1,1 @@
+ for node in `qstat -f | grep "@.*compute" | cut -f 2 -d "."| cut -f 2  -d "@" `; do echo "last reboot" | ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no $node > reboot.$node; wc -l reboot.$node; done

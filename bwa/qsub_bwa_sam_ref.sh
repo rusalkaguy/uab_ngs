@@ -1,4 +1,5 @@
-#!/bin/sh 
+#!/bin/bash
+. ~/uab_ngs/uab_ngs_functions_v1.sh  # load shared run_cmd() & run_step()
 #
 # BWA PE Illumna reads vs an un-indexed FASTA genome
 # 
@@ -31,6 +32,11 @@ TASK_NAME=bwa_sam
 CMD_LINE_PARAM_LIST="WORK_DIR SAMPLE_NAME READ_GROUP FWD_FASTQ REV_FASTQ REF_FASTA BAM_OUT"
 DERIVED_VAR_LIST="CMD_LINE HOSTNAME PROJECT_DIR REV_FASTQ DONE_ONLY QSUB_PE_OVERRIDE"
 
+# load needed modules 
+# we hit the exe directly
+#source /etc/profile.d/modules.sh
+#module load ngs-ccts/bwa.0.6.2
+
 QSUB_DRMAA="-pe smp 4 -l vf=1.9G -l h_vmem=2G" # worked for all but 11 kimberly samples - those crash
 
 if [ -z "$NSLOTS" ]; then export NSLOTS=4; fi
@@ -39,30 +45,6 @@ export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} FASTQ_DIR JOB_DIR"
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} BWA_VER BWA"
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} SAMTOOLS_VER SAMTOOLS"
 
-# UTIL function
-run_cmd () { # ARGS: stdout_dest_or_- cmd [args]
-    TMPSTD=$1; shift  # redirect for stdout
-    TMPERR=`mktemp`
-    if [[ -z "$TMPSTD" || "-" == "$TMPSTD" ]]; then  
-	# stdout to stdout
-	echo "# CMD: $*" 
-	eval $* 2>$TMPERR
-    else
-	# stdout to file
-	echo "# CMD: $* 1>$TMPSTD" 
-	eval $* 2>$TMPERR 1>$TMPSTD
-    fi
-    RC=$?
-    if [ $RC != 0 ]; then 
-	echo "ERROR: $*"
-	echo "ERROR: "`cat $TMPERR`
-	exit 1; 
-    fi
-    return $RC
-}
-
-
-    
 #====================================================================== 
 # MASTER: submit-self on a head-node
 #====================================================================== 
@@ -108,6 +90,13 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 	    export INDEX="$2"
 	    echo "**** -INDEX OVERRIDE=$INDEX **** " 
 	    shift 1
+	    shift 1
+	    continue
+	fi
+	# check for -index  over-ride
+	if [ "-no_pileup" == "$1" ]; then
+	    echo "**** -NO_PILEUP **** " 
+	    export NO_PILEUP=true
 	    shift 1
 	    continue
 	fi
@@ -168,7 +157,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
     export JOB_DIR=${WORK_DIR}/jobs		;export DIR_LIST="$DIR_LIST JOB_DIR"
     #export BWA_OUT_DIR=${WORK_DIR}/bwa		;export DIR_LIST="$DIR_LIST BWA_OUT_DIR"
     for dir in DIR_LIST; do
-	MDIR=`eval echo \$$dir`
+	eval MDIR=\$$dir
 	if [ ! -e ${MDIR} ]; then 
 	    run_cmd - mkdir -p $MDIR
 	fi
@@ -194,49 +183,6 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 	echo "[debug] skipped qsub"
     fi
 fi
-
-#====================================================================== 
-# UTIL FUNCTIONS
-#====================================================================== 
-run_step () { # ARGS: sample_name target_file step_name cmd_out cmd [cmd_args]
-    # args
-    RS_SAMPLE_NAME=$1; shift 1
-    RS_TARGET=$1; shift 1
-    RS_NAME=$1; shift 1
-    RS_STDOUT=$1; shift 1       # redirect for stdout
-
-    # log start/skip
-    if [[ ( -e "${RS_TARGET}" || -n "$DONE_ONLY" ) && ( -e "${RS_TARGET}.done" ) ]]; then
-	echo;echo `date`"	TS	SKIP ${RS_NAME}	${RS_SAMPLE_NAME}"; 
-    else
-	echo;echo `date`"	TS	START ${RS_NAME}	${RS_SAMPLE_NAME}"; 
-	
-	# run the cmd
-	RS_TMPERR=`mktemp`
-	if [[ -z "$RS_STDOUT" || "-" == "$RS_STDOUT" ]]; then  
-	    # stdout to stdout
-	    echo "# CMD: $*" 
-	    $* 2>$RS_TMPERR
-	else
-    	    # stdout to file
-	    echo "# CMD: $* 1>$RS_STDOUT" 
-	    $* 2>$RS_TMPERR 1>$RS_STDOUT
-	fi
-    fi
-    #  handle errors
-    RC=$?
-    if [ $RC != 0 ]; then 
-	echo "ERROR: $*"
-	echo "ERROR: "`cat $RS_TMPERR`
-	echo;echo `date`"	TS	ERROR ${RS_NAME}	${RS_SAMPLE_NAME}"
-	exit $RC
-    fi
-    # handle success
-    touch ${RS_TARGET}.done
-    echo;echo `date`"	TS	DONE ${RS_NAME}	${RS_SAMPLE_NAME}"; 
-    
-    return $RC
-}
 
 #====================================================================== 
 # actual slave work
@@ -344,16 +290,18 @@ if [ -n "$JOB_ID"  ]; then
     run_step $SAMPLE_NAME $FLAGSTAT_OUT SAMTOOLS_flagstat $FLAGSTAT_OUT \
 	samtools flagstat $BAM_OUT
 
-    # SAMTOOLs PILEUP -> VCF
-    SAMTOOLS_REF_INDEXED=${REF_FASTA}.fai
-    run_step $SAMPLE_NAME $SAMTOOLS_REF_INDEXED SAMTOOLS_index_contigs -  \
-	samtools faidx ${REF_FASTA}
-    BCF_RAW=${BAM_OUT}.raw.bcf
-    run_step $SAMPLE_NAME $VCF_RAW SAMTOOLS_mpileup_vcf $BCF_RAW  \
-	samtools mpileup -C50 -g -f ${REF_FASTA} $BAM_OUT 
-    VCF_OUT=${BAM_OUT}.vcf
-    run_step $SAMPLE_NAME $VCF_OUT SAMTOOLS_mpileup_vcf $VCF_OUT  \
-	bcftools view -cv $BCF_RAW
-    
+    if [ -z "$NO_PILEUP" ]; then
+	# SAMTOOLs PILEUP -> VCF
+	SAMTOOLS_REF_INDEXED=${REF_FASTA}.fai
+	run_step $SAMPLE_NAME $SAMTOOLS_REF_INDEXED SAMTOOLS_index_contigs -  \
+	    samtools faidx ${REF_FASTA}
+	BCF_RAW=${BAM_OUT}.raw.bcf
+	run_step $SAMPLE_NAME $VCF_RAW SAMTOOLS_mpileup_vcf $BCF_RAW  \
+	    samtools mpileup -C50 -g -f ${REF_FASTA} $BAM_OUT 
+	VCF_OUT=${BAM_OUT}.vcf
+	run_step $SAMPLE_NAME $VCF_OUT SAMTOOLS_mpileup_vcf $VCF_OUT  \
+	    bcftools view -cv $BCF_RAW
+    fi
+
     exit 0
 fi

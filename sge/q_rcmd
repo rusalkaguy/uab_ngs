@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+#$ -S /bin/bash
+#$ -cwd
+#$ -V
+#$ -N q_rcmd
+# stats to fit in verari nodes
+#$ -l h_rt=12:30:00
+#$ -l vf=900M
+#$ -j y
+#$ -m eas
+#
+
+#
+# Slave-mode: triggered by ENV VAR passed through qsub with -v
+#
+if [ -n "$Q_TARGET_FILE" ]; then 
+    #printenv
+    echo "I'm a q_rcmd slave:  $Q_CMD_STR $Q_TARGET_FILE > $Q_OUTPUT_FILE"
+    date
+    $Q_CMD_STR $Q_TARGET_FILE > $Q_OUTPUT_FILE
+    RC=$?
+    echo "RC=$RC"
+    date
+    if [ $RC != 0 ]; then "ERROR: $RC"; fi
+    exit $?
+fi
+
+#
+# error if no params
+#
+if [ ! -n "$*" ]; then 
+  echo "ERROR: must provide file or directory (or several) as arguments."
+  echo ""
+  echo "USAGE: q_rcmd ext_in cmd ext_out [file|directory] [other files/directories]"
+  echo ""
+  echo "Any directories listed will be recursively scanned with 'find' "
+  echo "and any .ext_in files found will run through 'cmd' and stdout stored in file.ext_out. "
+  echo ""
+  echo "A qsub job will be launched for every target file listed or found, "
+  echo "and they will be decompressed in parallel on the work nodes."
+  echo ""
+  echo "**INCLUDE THE . IN THE EXTENTIONS**"
+  echo ""
+  echo "EXAMPLE: fastq.gz decompesssion"
+  echo "  q_rcmd .fastq.gz zcat .fastq ./fastq_dir"
+  echo "Will decompress all the .fastq.gz in the ./fastq directory (and recursively"
+  echo "in subdirectories) placing the output in files with filename.fastq"
+  exit 1 
+fi
+
+#
+# parse args
+#
+Q_TARGET_EXT=$1
+Q_CMD_STR=$2
+Q_OUTPUT_EXT=$3
+shift 3
+
+if [ ! -e "$UABGRID_SCRATCH/logs" ]; then
+  echo "Creating directory $UABGRID_SCRATCH/logs for job output logs"
+  mkdir $UABGRID_SCRATCH/logs
+fi 
+
+echo Q_TARGET_EXT: ${Q_TARGET_EXT} 
+echo Q_OUTPUT_EXT: ${Q_OUTPUT_EXT} 
+echo "Preparing list of files to process..."
+for targ in $*; do
+    if [ -d "$targ" ]; then
+	echo "==== Scanning $targ ==== "
+	for file in $(find $targ -name "*$Q_TARGET_EXT" -type f -print 2>/dev/null); do
+   	   # Obtain the full directory path to the file
+	   filedir=$(readlink -f $file)
+
+	   # qsub a job to decompress that file
+	   echo -n "$filedir: "
+	   Q_OUTPUT_FILE=`echo ${filedir} | sed "s/${Q_TARGET_EXT}\$/${Q_OUTPUT_EXT}/"`
+  	   qsub -terse -M $USER@uab.edu -v Q_TARGET_FILE=$filedir -v Q_CMD_STR="$Q_CMD_STR" -v Q_OUTPUT_FILE=$Q_OUTPUT_FILE $0
+        done
+   else 
+	# Obtain the full directory path to the file
+	filedir=$(readlink -f $targ)
+
+	# qsub a job to decompress that file
+	echo -n "$filedir: "
+        Q_OUTPUT_FILE=`echo ${filedir} | sed "s/${Q_TARGET_EXT}\$/${Q_OUTPUT_EXT}/"`
+ 	qsub -terse -M $USER@uab.edu -v Q_TARGET_FILE=$filedir -v Q_CMD_STR="$Q_CMD_STR" -v Q_OUTPUT_FILE=$Q_OUTPUT_FILE $0
+   fi	
+done
+

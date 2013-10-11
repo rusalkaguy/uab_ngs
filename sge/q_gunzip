@@ -1,0 +1,74 @@
+#!/bin/bash
+#
+#$ -S /bin/bash
+#$ -cwd
+#$ -V
+#$ -l h_rt=4:00:00
+#$ -l vf=1.9G,h_vmem=2G
+#$ -j y
+#$ -m beas
+#$ -e $JOB_NAME.$JOB_ID.err
+#$ -o $JOB_NAME.$JOB_ID.out
+#
+
+#
+# Slave-mode: triggered by ENV VAR
+#
+if [ -n "$JOB_ID" ]; then 
+    #echo "I'm a slave: gzip -d $Q_GUNZIP_FILE"
+    # printenv
+    OUT=`dirname $TARGET`/.`basename $TARGET`.out
+    DONE=`dirname $TARGET`/.`basename $TARGET`.done
+    gzip -d $TARGET 2>&1 > $OUT
+    RC=$?
+    if [ $RC == "0" ]; then 
+	touch $DONE
+    fi
+    exit $RC
+fi
+
+#
+# error if no params
+#
+if [ ! -n "$*" ]; then 
+  echo "ERROR: must provide file or directory (or several) as arguments."
+  echo ""
+  echo "USAGE: q_gunzip [file|directory] [other files/directories]"
+  echo ""
+  echo "Any directories listed will be recursively scanned with 'find' "
+  echo "and any .gz files found will be decompressed. "
+  echo ""
+  echo "A qsub job will be launched for every .gz file listed or found, "
+  echo "and they will be decompressed in parallel on the work nodes."
+  exit 1 
+fi
+
+for targ in $*; do
+    if [ -d "$targ" ]; then
+	echo "==== Scanning $targ ==== "
+	for file in $(find $targ -name '*.gz' -type f -print 2>/dev/null); do
+   	   # call self on files
+	   $0 $file
+        done
+   else 
+	# Obtain the full directory path to the file
+	filedir=$(readlink -f $targ)
+
+	# create safe job name
+	NAME='q_gunzip-'`echo $targ|perl -pe 's|[/\s()]|-|g;'`
+	# qsub a job to decompress that file
+	echo -n "$targ: "
+	if [ "debug" != "" ]; then
+	    qsub -terse \
+		-M $USER@uab.edu \
+		-N $NAME \
+		-v TARGET=$filedir \
+		$0
+	else
+	    export TARGET=$filedir
+	    export JOB_ID=run_now
+	    $0 
+	fi
+   fi	
+done
+

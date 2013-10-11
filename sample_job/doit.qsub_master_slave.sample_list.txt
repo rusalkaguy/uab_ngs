@@ -1,0 +1,5 @@
+# sample list for doit.qsub_master_slave.sh
+# WORK_DIR	SAMPLE_NAME	INFILE
+~/tmp	S1	infile_A.txt
+~/tmp	S2	infile_B.txt
+~/tmp	S3	infile_C.txt
