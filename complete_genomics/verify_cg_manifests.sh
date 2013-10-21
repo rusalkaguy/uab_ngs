@@ -78,7 +78,7 @@ else
 		
 		# process manifest
 		echo "[$PWD] sha256sum -c $1 > $CHECKSUM_OUT"
-		#sha256sum -c $1 > $CHECKSUM_OUT
+		sha256sum -c $1 > $CHECKSUM_OUT
 		RC=$?	
 		COUNT_FAIL=`grep -c " FAILED" $CHECKSUM_OUT`
 		COUNT_OK=`grep -c " OK" $CHECKSUM_OUT`
