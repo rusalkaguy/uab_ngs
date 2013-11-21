@@ -1,7 +1,7 @@
 #!/bin/bash
 #*** QSUB FLAGS ***
-# avoid SSG nodes, which cause "mem map file errors" (SNPeff annotate & annovar/convert2annovar.pl)
-#$ -q all.q,sipsey.q
+## avoid SSG nodes, which cause "mem map file errors" (SNPeff annotate & annovar/convert2annovar.pl)
+## -q all.q,sipsey.q
 # *** std qsub ****
 #$ -S /bin/bash
 #$ -cwd # remember what dir I'm launched in
@@ -17,21 +17,35 @@
 # libraries to load
 . /etc/profile.d/modules.sh          # enable module loading
 module load ngs-ccts/annovar/2013.09.11
-VCF=gatk2.5-2-var_filt-snps_indels_filtered-all.vcf
+module list
 
+if [ -n "$1" ]; then VCF=$1; fi
+if [ -z "$VCF" ]; then VCF=uab_pad200_hg19.vcf; fi
+if [[ "$VCF" == *hc_* ]]; then 
+    # UAB generated HaploType caller - includes sites that failed QC, FILTER column is set appropriately
+    FILTER="-filter PASS"
+else
+    # WUSTL - these VCFs already have the QC failures removed, but do NOT have PASS in the filter column, only "."
+    FILTER=""
+fi
 
-DEST=vcf4old.inc.com/uab_pad200_hg19 
+echo "VCF=$VCF"
+echo "FILTER=$FILTER"
+
+DEST=vcf4old.inc.com/`basename $VCF .vcf`.avinput
 mkdir -p `dirname $DEST`
 echo -n "START "; date;
 echo -n "HOST  $HOSTNAME aka "; hostname
-cd /scratch/user/curtish/kimberly_lupus/annovar/src_vcfs/uab_pad200_hg19
-convert2annovar.pl -format vcf4old $VCF -outfile $DEST -include -comment  
-echo -n "DONE  "; date
+CMD="convert2annovar.pl -format vcf4old $VCF -outfile $DEST $FILTER -include -comment "
+echo $CMD
+$CMD; RC=$?
+echo -n "DONE RC=$RC "; date
 
-DEST=vcf4old.allallele.inc.com/uab_pad200_hg19 
+DEST=vcf4old.allallele.inc.com/`basename $VCF .vcf`.avinput
 mkdir -p `dirname $DEST`
 echo -n "START "; date;
 echo -n "HOST  $HOSTNAME aka "; hostname
-cd /scratch/user/curtish/kimberly_lupus/annovar/src_vcfs/uab_pad200_hg19
-convert2annovar.pl -format vcf4old $VCF -outfile $DEST -include -comment  -allallele
-echo -n "DONE  "; date
+CMD="convert2annovar.pl -format vcf4old $VCF -outfile $DEST $FILTER -include -comment -allallele"
+echo $CMD
+$CMD; RC=$?
+echo -n "DONE RC=$RC "; date

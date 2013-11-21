@@ -4,7 +4,7 @@
 # produce several TFAM files (one per case/control) from a .VCF file
 # by 
 # ANNOVAR-2013-09-11/convert2annovar.sh -format vcf4old -include -comment 
-#  with or without -allallele (the uniq fixes that)
+#
 ######################################################################
 
 # ARGS
@@ -26,7 +26,7 @@ SAMPLE_NUM=`echo $SAMPLE_LIST | wc -w`
 echo "Found $SAMPLE_NUM samples"
 
 # for each phenotype definition
-for phenotype in sleVnorm esrdVnorm; do
+for phenotype in sleVnorm esrdVnorm esrdVsle esrdVsleNorm; do
 
     echo "PHENOTYPE: $phenotype"
     OUT=$OUT_BASE.$phenotype.tfam
@@ -41,6 +41,11 @@ for phenotype in sleVnorm esrdVnorm; do
     # 6.   Phenotype
     #    Phenotype can be quantitative or affection status
     #            affection = { -9 missing,  0 missing,  1 unaffected,  2 affected }
+    # constants
+    STATUS_MISSING=0
+    STATUS_UNAFFECTED=1
+    STATUS_AFFECTED=2
+    # counters
     STATUS_0=0
     STATUS_1=0
     STATUS_2=0
@@ -57,18 +62,38 @@ for phenotype in sleVnorm esrdVnorm; do
 
 	if [[ "$sample" == *HapMap* || "$sample" == *NEG* || "$sample" == *Yung* ]]; then
 	    # HapMap samples are outside our dataset
-	    PHENOTYPE_STATUS=0
+	    PHENOTYPE_STATUS=$STATUS_MISSING
 	    #echo "MISSING $sample"
 	else
 	    # which phenotype are we looking at
 	    if [ "$phenotype" == "sleVnorm" ]; then
 		if [[ "$sample" == *SLE* || "$sample" == *NON_NEPHRITIS* ]]; then
-		    PHENOTYPE_STATUS=2
+		    PHENOTYPE_STATUS=$STATUS_AFFECTED
 		fi
 	    fi	    
 	    if [ "$phenotype" == "esrdVnorm" ]; then
 		if [[ "$sample" == *ESRD* ]]; then
 		    PHENOTYPE_STATUS=2
+		fi
+	    fi	    
+	    if [ "$phenotype" == "esrdVsle" ]; then
+		# default (for Healthy)
+		PHENOTYPE_STATUS=$STATUS_MISSING
+		if [[ "$sample" == *SLE* ]]; then 
+		    PHENOTYPE_STATUS=$STATUS_UNAFFECTED
+		fi
+		if [[ "$sample" == *ESRD* ]]; then
+		    PHENOTYPE_STATUS=$STATUS_AFFECTED
+		fi
+	    fi	    
+	    if [ "$phenotype" == "esrdVsleNorm" ]; then
+		# default (for Healthy)
+		PHENOTYPE_STATUS=$STATUS_UNAFFECTED
+		if [[ "$sample" == *SLE* ]]; then 
+		    PHENOTYPE_STATUS=$STATUS_UNAFFECTED
+		fi
+		if [[ "$sample" == *ESRD* ]]; then
+		    PHENOTYPE_STATUS=$STATUS_AFFECTED
 		fi
 	    fi	    
 	fi

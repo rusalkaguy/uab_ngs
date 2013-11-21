@@ -4,6 +4,7 @@
 # Run an ANNOVAR pipeline on a SAMPLE
 # Summarize into EXCEL format (TSV)
 #
+# http://www.openbioinformatics.org/annovar/annovar_accessary.html#excel
 # -operation argument instruct what operation are used: gene-based (g), reverse region-based (rr), region-based (r), filter-based (f), model-based (m), respectively.
 #
 ########################################################################
@@ -11,6 +12,7 @@
 #$ -cwd # remember what dir I'm launched in
 #$ -V   # need this for parameter passing from MASTER to SLAVE!
 #$ -m beas  #email at:  Begining, End, Abort, Suspend
+#$ -M $USER@uab.edu
 # *** output logs ***
 #$ -j y # merge stderr into stdout
 #$ -o $JOB_NAME.$JOB_ID.out
@@ -21,11 +23,14 @@
 # libraries to load
 . /etc/profile.d/modules.sh          # enable module loading
 module load ngs-ccts/annovar/2013.09.11
+module list
 
+if [ -n "$1" ]; then IN=$1; fi
 if [ -z "$IN" ]; then IN=wustl_pad200_b37.hg19.ESRD_SLE_1.avinput; fi
-if [ -z "$OUT" ]; then OUT=$IN; fi
+if [ -z "$OUT" ]; then OUT=`dirname $IN`/`basename $IN .avinput`; fi
 
-OUT=$IN
+echo "IN=$IN"
+echo "OUT=$OUT"
 
 # gene annotations
 OPERATOR+=g; PROTOCOL+=refGene; OP_ARGS+=
@@ -40,7 +45,10 @@ OPERATOR+=,r; PROTOCOL+=,wgEncodeBroadHmmGm12878HMM; OP_ARGS+=, # blood cell lin
 
 # filter annotations
 
-OPERATOR+=,f; PROTOCOL+=,cg46; OP_ARGS+=, # blood cell line promoters/repressor
+OPERATOR+=,f; PROTOCOL+=,1000g2012apr_eur; OP_ARGS+=, # 1000 Genomes Project (2012 April) EUR allele freq
+OPERATOR+=,f; PROTOCOL+=,1000g2012apr_all; OP_ARGS+=, # 1000 Genomes Project (2012 April) ALL-samples allele freq
+OPERATOR+=,f; PROTOCOL+=,popfreq_max; OP_ARGS+=, # Max pop freq across 
+#OPERATOR+=,f; PROTOCOL+=,popfreq_all; OP_ARGS+=, # DOWNLOAD MISSING - CSV allele/population freq values: PopFreqMax 1000G2012APR_ALL 1000G2012APR_AFR 1000G2012APR_AMR 1000G2012APR_ASN 1000G2012APR_EUR ESP6500si_AA ESP6500si_EA CG46 NCI60 SNP137 COSMIC65 DISEASE
 OPERATOR+=,f; PROTOCOL+=,esp6500si_all; OP_ARGS+=, # NHLBI exome over 6000 healthy + disease http://www.openbioinformatics.org/annovar/annovar_filter.html#esp
 OPERATOR+=,f; PROTOCOL+=,esp6500si_ea; OP_ARGS+=, # European Ancestry
 OPERATOR+=,f; PROTOCOL+=,cg46; OP_ARGS+=, # Complete Genomics 46 unrelated healthy people (WGS)
@@ -49,16 +57,17 @@ OPERATOR+=,f; PROTOCOL+=,snp137; OP_ARGS+=, # latest
 OPERATOR+=,f; PROTOCOL+=,snp137NonFlagged; OP_ARGS+=, # Flagged SNPs include SNPs < 1% minor allele frequency (MAF) (or unknown), mapping only once to reference assembly, flagged in dbSnp as "clinically associated". 
 OPERATOR+=,f; PROTOCOL+=,ljb2_all; OP_ARGS+=, # 
 
-# DOWNLOAD?: popfreq_all - CSV allele/population freq values: PopFreqMax 1000G2012APR_ALL 1000G2012APR_AFR 1000G2012APR_AMR 1000G2012APR_ASN 1000G2012APR_EUR ESP6500si_AA ESP6500si_EA CG46 NCI60 SNP137 COSMIC65 DISEASE
-# DOWNLOAD 1000g2012apr (1000g2012apr,1000g2012apr_EA/EUR) - pop freq  - can apply -maf 0.05 argument
 echo -n "START "; date
 
-table_annovar.pl $IN $ANNOVAR_HG19_DB --buildver hg19 \
+CMD="table_annovar.pl $IN $ANNOVAR_HG19_DB --buildver hg19 \
     -protocol  $PROTOCOL \
     -operation $OPERATOR \
     -arg       $OP_ARGS \
     -nastring NA \
-    -outfile $OUT
+    -outfile $OUT \
+"
+echo $CMD
+$CMD
 RC=$?
 echo "RC=$RC"
 

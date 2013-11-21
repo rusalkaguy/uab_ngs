@@ -23,5 +23,10 @@ mkdir -p `dirname $DEST`
 echo -n "START "; date;
 echo -n "HOST  $HOSTNAME aka "; hostname
 cd /scratch/user/curtish/kimberly_lupus/annovar/src_vcfs/uab_pad200_hg19
-convert2annovar.pl -format vcf4 $VCF -outfile $DEST -allsample -include -comment -withzyg 
-echo -n "DONE  "; date
+CMD=convert2annovar.pl -format vcf4 $VCF -outfile $DEST -allsample -include -comment -withzyg 
+echo $CMD
+$CMD; RC=$?
+
+echo -n "DONE [RC=$RC]  "; date
+
+exit $RC

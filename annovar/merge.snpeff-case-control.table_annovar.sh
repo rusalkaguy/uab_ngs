@@ -4,6 +4,8 @@ IN_SNPSIFT_CC_TXT=$1
 IN_SNPSIFT_CC_VCF=`dirname $IN_SNPSIFT_CC_TXT`/`basename $IN_SNPSIFT_CC_TXT .txt`.vcf
 IN_TABLE_ANNOVAR=$2
 
+
+OUT_DATA_USORT=`basename $IN_SNPSIFT_CC_TXT .txt`.annovar.data.unsorted
 OUT_DATA=`basename $IN_SNPSIFT_CC_TXT .txt`.annovar.data.txt
 OUT_FIELDS=`basename $IN_SNPSIFT_CC_TXT .txt`.annovar.fields.txt
 
@@ -27,7 +29,12 @@ echo "pasting data"
 paste \
     <(grep -v "^##" $IN_SNPSIFT_CC_TXT| cut -f 1-) \
     <(grep -v "^#" $IN_TABLE_ANNOVAR | cut -f 1-) \
-    > $OUT_DATA
+    > $OUT_DATA_USORT
+
+(head -n 1 $OUT_DATA_USORT; \
+    grep -v "^#" $OUT_DATA_USORT \
+	| sort -k1,1 -k2,2n \
+) > $OUT_DATA
 
 echo ""
 echo "OUT_DATA + header " `wc -l $OUT_DATA`
