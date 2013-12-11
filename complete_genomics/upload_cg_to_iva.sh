@@ -26,18 +26,19 @@ IVA_PASSWORD=$3
 SMTP_SERVER=$4   # remote/local mail server
 CG_DISK_DIR=$5   # path to disk images of CG data.
 EMAIL_CC=$6      # carbon copy status emails
+SAMPLEFILE=$7    # list of samples to upload- one per line
 # USAGE MESSAGE
 if [ -z "$IVA_PASSWORD" ]; then
-	echo "USAGE: $SCRIPT_NAME IVA_KEY IVA_USER IVA_PASSWORD SMTP_SERVER CG_DISK_DIR EMAIL_CC"
+	echo "USAGE: $SCRIPT_NAME IVA_KEY IVA_USER IVA_PASSWORD SMTP_SERVER CG_DISK_DIR EMAIL_CC SAMPLE_LIST"
 	exit 1
 fi
 
 #Get list of samples. Define variables. Make a directory called status in the current directory. Pass UAB_Bridges_SampleManifest into variable samplefile, then output that
 SAMPLE_BASE_DIR=$CG_DISK_DIR
-STATUS_DIR=./status
+STATUS_DIR=./status_sle
 mkdir -p $STATUS_DIR
 if [ $? != 0 ]; then echo "ERROR: couldn't create $STATUS_DIR"; exit 1; fi
-SAMPLEFILE=sample_list.txt  # on id per line
+if [ -z "$SAMPLEFILE" ]; then SAMPLEFILE=sample_list.txt; fi  # on id per line
 if [ ! -e $SAMPLE_FILE ]; then echo "ERROR: couldn't find sample_list.txt to read sample IDs"; exit 1; fi
 SAMPLE_LIST=`cat $SAMPLEFILE`
 MANIFEST_FILE=./manifest.xls  # manifest file to upload giving sample metadata
@@ -56,7 +57,7 @@ send_mail () { # args: subject
         if [ $? == 0 ]; then #check if the return code of mailsend 
                 # use mailsend to send email
                 mailsend -smtp $SMTP_SERVER \
-		    -f ${USER}@$`domainname -f` \
+		    -f ${USER}@`domainname -f` \
 		    -name "$SCRIPT_NAME" \
 		    -sub "$1" \
 		    -t $IVA_USER \
@@ -83,6 +84,7 @@ for SAMPLE in $SAMPLE_LIST; do #define a variable SAMPLE as each component of SA
 		ASM_DIR=$SAMPLE_DIR/ASM 
 
                 # Now lets create the names of the 3 files that we will be uploading
+                MANIFEST_FILE=/BMI/kimberly/iva_upload/ManifestSLE_1.xls  # Manifest file - there's only one but it will try and upload it for every sample.
 		VAR_FILE=$ASM_DIR/var-$ASM_NAME.tsv.bz2 #Pass the handle for each Var file into VAR_FILE
 		JUNCTION_FILE=$ASM_DIR/SV/highConfidenceJunctionsBeta-$ASM_NAME.tsv #Pass the path and handle for each junction file into  JUNCTION_FILE
                 COVERAGE_FILE=$ASM_DIR/CNV/depthOfCoverage_100000-$ASM_NAME.tsv #And for the coverage files
@@ -92,6 +94,7 @@ for SAMPLE in $SAMPLE_LIST; do #define a variable SAMPLE as each component of SA
 		echo -n "PARENT_DIR=$PARENT_DIR "; if  [ -e  "$PARENT_DIR" ]; then echo "(found)"; else echo "MISSING"; fi
 		echo -n "ASM_NAME=$ASM_NAME "; if  [ -e  "$ASM_NAME" ]; then echo "(found)"; else echo "MISSING"; fi
 		echo -n "ASM_DIR=$ASM_DIR "; if  [ -e  "$ASM_DIR" ]; then echo "(found)"; else echo "MISSING"; fi
+                echo -n "MANIFEST_FILE=$MANIFEST_FILE "; if  [ -e  "$MANIFEST_FILE" ]; then echo "(found)"; else echo "MISSING"; fi 
 		echo -n "VAR_FILE=$VAR_FILE "; if  [ -e  "$VAR_FILE" ]; then echo "(found)"; else echo "MISSING"; fi 
 		echo -n "JUNCTION_FILE=$JUNCTION_FILE "; if  [ -e  "$JUNCTION_FILE" ]; then echo "(found)"; else echo "MISSING"; fi
 		echo -n "COVERAGE_FILE=$COVERAGE_FILE "; if  [ -e  "$COVERAGE_FILE" ]; then echo "(found)"; else echo "MISSING"; fi
@@ -105,13 +108,21 @@ for SAMPLE in $SAMPLE_LIST; do #define a variable SAMPLE as each component of SA
 				echo "SKIP: Already Uploaded: $FILE_NAME"
 			    else 
 				#Otherwise, upload the file. The next 5 lines are the arguments for curl. 
+				echo "tail -f ${STATUS_FILE}.stderr"
+				echo "curl --ftp-ssl --pubkey ing-pub-key.pem \
+				    -T $FILE_NAME \
+				    -u ${IVA_USER}:IVA_PASSWORD \
+				    --insecure \
+				    ftp://ftps2.ingenuity.com/for_${IVA_USER}_FTP_upload_$IVA_KEY/ "
 				curl --ftp-ssl --pubkey ing-pub-key.pem \
 				    -T $FILE_NAME \
-				    -u ${IVA_USER}:$PASSWORD \
+				    -u ${IVA_USER}:$IVA_PASSWORD \
 				    --insecure \
 				    ftp://ftps2.ingenuity.com/for_${IVA_USER}_FTP_upload_$IVA_KEY/ \
-				    2>&1 | tee ${STATUS_FILE}.out
+				    2> ${STATUS_FILE}.stderr \
+				    1> ${STATUS_FILE}.stdout
 				RC=$? #Ask, What is the status of the previous Curl command? What happened?
+				echo 
 				if [ $RC==0 ]; then #If this query returns 0, the command went OK, so echo File Transferred
 					echo "File Transferred"
 					md5sum $FILE_NAME > $STATUS_FILE #Generate a Checksum and pass it into STATUS_FILE
