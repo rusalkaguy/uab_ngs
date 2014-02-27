@@ -24,7 +24,7 @@ if [ -n "$JOB_ID" ]; then
     if [ $RC == "0" ]; then 
 	touch $DONE
     fi
-    exit $RC
+    exit $RC 2>&1 > /dev/null
 fi
 
 #
@@ -40,7 +40,8 @@ if [ ! -n "$*" ]; then
   echo ""
   echo "A qsub job will be launched for every .gz file listed or found, "
   echo "and they will be decompressed in parallel on the work nodes."
-  exit 1 
+  RC=1; exit $RC 2>&1 > /dev/null
+ 
 fi
 
 for targ in $*; do
