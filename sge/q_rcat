@@ -3,7 +3,7 @@
 #$ -S /bin/bash
 #$ -cwd
 #$ -V
-#$ -N q_rcmd
+#$ -N q_rcat
 # stats to fit in verari nodes
 #$ -l h_rt=12:00:00
 #$ -l vf=900M
@@ -15,7 +15,7 @@
 # Slave-mode: triggered by ENV VAR passed through qsub with -v
 #
 if [ -n "$Q_TARGET_FILE" ]; then 
-    echo "I'm a q_rcmd slave:  $Q_CMD_STR $Q_TARGET_FILE > $Q_OUTPUT_FILE"
+    echo "I'm a q_rcat slave:  $Q_CMD_STR $Q_TARGET_FILE > $Q_OUTPUT_FILE"
     printenv
     eval "cat $Q_TARGET_FILE | $Q_CMD_STR " > $Q_OUTPUT_FILE
     exit $?
@@ -27,7 +27,7 @@ fi
 if [ ! -n "$*" ]; then 
   echo "ERROR: must provide file or directory (or several) as arguments."
   echo ""
-  echo "USAGE: q_rcmd ext_in cmd ext_out [file|directory] [other files/directories]"
+  echo "USAGE: q_rcat ext_in cmd ext_out [file|directory] [other files/directories]"
   echo ""
   echo "Any directories listed will be recursively scanned with 'find' "
   echo "and any .ext_in files found will run through 'cmd' and stdout stored in file.ext_out. "
