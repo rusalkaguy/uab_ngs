@@ -1,0 +1,161 @@
+#!/bin/bash
+#######################################################################
+#
+# Self-submitting Qsub script for xargs.
+# 
+# cat args | q_xargs [-debug] cmd [cmd-args]
+#
+########################################################################
+# libraries to load
+. /etc/profile.d/modules.sh          # enable module loading
+. ~/uab_ngs/uab_ngs_functions_v1.sh  # load shared run_cmd() & run_step()
+#
+#*** QSUB FLAGS ***
+#$ -S /bin/bash
+#$ -cwd     # remember what dir I'm launched in 
+#$ -V       # need this for parameter passing from MASTER to SLAVE!
+#$ -j y     # merge stderr into stdout
+#$ -m beas  # email at:  Begining, End, Abort, Suspend
+#$ -o jobs/$JOB_NAME.$JOB_ID.out
+#*** END QSUB ****
+# run time
+QSUB_TIME_DRMAA="-l h_rt=24:00:00 -l s_rt=23:55:00 " # 
+QSUB_MACH_DRMAA="-l vf=1.9G -l h_vmem=2G" # 1 CPUs, 2G
+QSUB_TASK_NAME=q_xargs
+
+#====================================================================== 
+# MASTER: submit-self on a head-node
+#====================================================================== 
+if [[ -z "$JOB_ID" || "$1" == "-inline"|| "$1" == "-debug" ]]; then
+
+    #
+    # error if no params
+    #
+    if [[ -z "$1" ]]; then 
+	echo "ERROR: missing arguments"
+	echo ""
+	echo "USAGE: q_xargs cmd [cmd_args]"
+	echo ""
+	echo "A qsub job will be launched for every line of STDIN."
+	echo 'Each job will execute \"cmd [cmd_args] $LINE\" '
+	echo ""
+	echo "**INCLUDE THE . IN THE EXTENTIONS**"
+	echo ""
+	echo "EXAMPLE: wget"
+	echo "  echo http://www.google.com | q_xargs wget"
+	echo "Will fetch Google index.html"
+	qsub_exit 1
+    fi
+
+    # --------------------------
+    # create jobs dir
+    # --------------------------
+    mkdir -p jobs
+
+    # --------------------------
+    # parse parameters
+    # --------------------------
+
+    # capture the original CMD_LINE
+    if [ -z "$CMD_LINE" ]; then  CMD_LINE="$0 $*"; fi
+
+    # check for debug or no qsub - so it will work outside the cluster
+    QSUB=`which qsub 2>/dev/null`
+    if [[ -z "$QSUB" ]]; then 
+	export JOB_ID=run_now
+	echo "# **** NO QSUB FOUND ****" 
+    fi
+
+    # parse FLAGS on cmd-line
+    while [[ "$1" == -* ]]; do 
+	echo "# PARSE FLAG: $1"
+	if [[ "-debug" == "$1" || "-inline" == "$1" ]]; then
+	    shift 1
+	    export JOB_ID=run_now
+	    export QSUB=
+	    echo "# **** NO QSUB [NSLOTS=$NSLOTS] ****" 
+	    continue
+	fi
+	if [[ "-f" == "$1" || "-force" == "$1" ]]; then
+	    shift 1
+	    export NO_DONE=always_run
+	    continue
+	fi
+	# unknown flag
+	echo "ERROR: unknown option: $1"
+	qsub_exit 1
+    done
+
+    # get command & args
+    export XARGS_CMD="$*"
+    export XARGS_CMD_NAME=`echo $XARGS_CMD | perl -pe 's/ +/_/g;s/:/./g;s/[^a-z0-9._-]//gi;'`
+
+    # get my own location in a portable manner
+    if [[ $0 == /* ]]; then JOB_SCRIPT=$0; else JOB_SCRIPT=`pwd`/$0; fi
+
+    # loop over input
+    while read line; do
+	# setup for LINE
+	export XARGS_LINE="$line"
+	export XARGS_LINE_NAME=`echo $XARGS_LINE | perl -pe 's/ +/_/g;s/:/./g;s/[^a-z0-9.|_-]//gi;'`
+	TASK_NAME="$XARGS_CMD_NAME...$XARGS_LINE_NAME"
+	echo "# TASK_NAME=$TASK_NAME"
+	export XARGS_DONE_FILE=".done.$TASK_NAME"
+
+	# setup to run
+	echo -n "# [$XARGS_CMD $XARGS_LINE]: "
+
+	if [[ -e "$XARGS_DONE_FILE" && -z "$NO_DONE" ]]; then
+	    # already did that!
+	    echo "SKIPPED"
+	else
+	    if [ -n "$QSUB" ]; then
+		qsub -terse \
+		    $QSUB_TIME_DRMAA $QSUB_MACH_DRMAA \
+		    -N "$TASK_NAME" \
+		    -M $USER@uab.edu \
+		    $JOB_SCRIPT
+		RC=$?
+		if [ $RC != 0 ]; then echo "ERROR: bad return code from QSUB"; qsub_exit $RC; fi	    
+	    else
+		$JOB_SCRIPT
+	    RC=$?
+	    if [ $RC != 0 ]; then echo "ERROR: bad return code from $JOB_SCRIPT"; qsub_exit $RC; fi	    
+	    fi
+	fi
+    done
+    
+    # successfully submitted all jobs
+    qsub_exit 0
+fi
+
+
+#====================================================================== 
+# actual slave work
+#====================================================================== 
+if [ -n "$JOB_ID"  ]; then
+    echo "# -- environment --"
+    echo "# XARGS_CMD=\"$XARGS_CMD\""
+    echo "# XARGS_LINE=\"$XARGS_LINE\""
+    echo "# XARGS_DONE_FILE=\"$XARGS_DONE_FILE\""
+    echo "# JOB_NAME=$JOB_NAME"
+    echo "# JOB_ID=$JOB_ID"
+    echo "# NSLOTS=$NSLOTS"
+    echo "# -- I'm a qsub slave -- "
+    echo "# $XARGS_CMD $XARGS_LINE"
+
+
+    eval "$XARGS_CMD $XARGS_LINE"
+    RC=$?
+    
+    if [ $RC != 0 ]; then
+	# failure
+	qsub_exit $RC
+    fi
+
+    # success
+    if [ -z "$NO_DONE" ]; then
+	touch $XARGS_DONE_FILE
+    fi
+    qsub_exit 0
+fi
