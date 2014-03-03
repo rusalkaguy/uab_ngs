@@ -7,6 +7,12 @@
 #
 FILTER=.
 if [ -n "$1" ]; then FILTER="$1"; shift; fi
+EMAILS=$USER@uab.edu
+while [[ "$1" == *@* ]]; do 
+	EMAILS="$EMAILS $1"
+	shift
+done
+echo "EMAILS=$EMAILS"
 MESSAGE=done
 if [ -n "$2" ]; then MESSAGE="$*"; fi
 
@@ -19,6 +25,6 @@ while [ "$JOB_COUNT" -gt 0 ]; do
 	JOB_COUNT=`qstat -u $USER | grep -e "$FILTER" | wc -l`
 done
 # email final status
-(echo "cheaha queue done";echo "FILTER: $FILTER"; echo "MESSAGE: $MESSAGE") | mail -s "qstat: cheaha all done $FILTER" $USER@uab.edu
-echo "email sent to $USER@uab.edu"
+(echo "cheaha queue done";echo "FILTER: $FILTER"; echo "MESSAGE: $MESSAGE") | mail -s "qstat: cheaha all done $FILTER" $EMAILS
+echo "email sent to $EMAILS"
 
