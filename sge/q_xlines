@@ -97,8 +97,10 @@ if [[ -z "$JOB_ID" || "$1" == "-inline"|| "$1" == "-debug" ]]; then
     while read line; do
 	# setup for LINE
 	export XARGS_LINE="$line"
-	export XARGS_LINE_NAME=`echo $XARGS_LINE | perl -pe 's/ +/_/g;s/:/./g;s/[^a-z0-9.|_-]//gi;'`
-	TASK_NAME="$XARGS_CMD_NAME...$XARGS_LINE_NAME"
+	export XARGS_LINE_NAME=`echo $XARGS_LINE | perl -pe 's/ +/_/g;s/:/./g;s/[^a-z0-9._-]//gi;'`
+	#TASK_NAME="$XARGS_CMD_NAME...$XARGS_LINE_NAME"
+	# use shorter name when LINE can be VERY long 
+	TASK_NAME="$XARGS_CMD_NAME"
 	echo "# TASK_NAME=$TASK_NAME"
 	export XARGS_DONE_FILE=".done.$TASK_NAME"
 
