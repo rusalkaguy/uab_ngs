@@ -74,7 +74,7 @@ if [ -z "$JOB_ID" ]; then
 	#
         # scan a directory for target files
 	#
-	TARG_FILES=`find $TARGET -name "evidenceDnbs-*.tsv.bz2"`
+	TARG_FILES=`find $TARGET -name "evidenceDnbs-*-*.tsv.bz2"`
 	for targ in $TARG_FILES; do
 	    $0 $FLAGS $targ
 	done
@@ -115,7 +115,7 @@ if [ -n "$JOB_ID"  ]; then
     for myvar in $CMD_LINE_PARAM_LIST ; do
 	echo -n "$myvar	:"; eval echo \$$myvar
     done
-    echo "-- derrived values line params -- "
+    echo "-- derived values line params -- "
     for myvar in $DERIVED_VAR_LIST ; do
 	echo -n "$myvar	:"; eval echo \$$myvar
     done
@@ -130,6 +130,12 @@ if [ -n "$JOB_ID"  ]; then
 	DIR=$DIR2/BAM/EVIDENCE
     fi
     mkdir -p $DIR
+    RC=$?; 
+    if [ $RC != 0 ]; then
+        echo "ERROR: Couldn't create $DIR: RC=$RC"
+        exit 1 2>&1 > /dev/null;
+    fi
+
     RESULT=`basename $TARGET .tsv.bz2`
     RESULT_PATH=$DIR/$RESULT
 
