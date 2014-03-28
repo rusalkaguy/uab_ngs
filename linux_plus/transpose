@@ -1,0 +1,33 @@
+#!/usr/bin/gawk -f
+# 
+# transpose rows and columns in a tab-delimited file
+#
+# http://stackoverflow.com/questions/9534744/how-to-transfer-the-data-of-columns-to-rows-with-awk
+#
+BEGIN {
+    FS="\t";
+    OFS="\t";
+    max_x =0;
+    max_y =0;
+}
+
+{
+    max_y++;
+    for( i=1; i<=NF; i++ )
+    {
+        if (i>max_x) max_x=i;
+        A[i,max_y] = $i;
+    }
+}
+
+END {
+    for ( x=1; x<=max_x; x++ )
+    {
+        for ( y=1; y<=max_y; y++ )
+        {
+            if ( (x,y) in A ) printf "%s",A[x,y];
+            if ( y!=max_y ) printf OFS;
+        }
+        printf "\n";
+    }
+}
