@@ -182,7 +182,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
     # --------------------------
     if [ -z "$JOB_ID" ]; then
 	echo -n "${TASK_NAME}:${SAMPLE_NAME}:QSUB:"
-
+	QSUB_NAME="${TASK_NAME}.${SAMPLE_NAME}.${INDEX_ABBREV}"
 	pushd ${WORK_DIR}
 	qsub -terse \
 	    -N $QSUB_NAME \
