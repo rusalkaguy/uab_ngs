@@ -40,14 +40,11 @@ DERIVED_VAR_LIST="CMD_LINE HOSTNAME PROJECT_DIR REV_FASTQ DONE_ONLY QSUB_PE_OVER
 
 QSUB_DRMAA="-pe smp 4 -l vf=1.9G -l h_vmem=2G" 
 if [ -z "$NSLOTS" ]; then export NSLOTS=4; fi  # for debugging
-JAVA_RAM=$(( ($NSLOTS * 2 ) - 1 ))
-JAVA_DRMAA="-Xms${JAVA_RAM}g -Xmx${JAVA_RAM}g" 
 
 # load needed modules 
 # we hit the exe directly
 module load ngs-ccts/bwa/0.7.7
 module load ngs-ccts/samtools/0.1.19
-
 if [ -z "$PICARD_JAR" ]; then PICARD_JAR=/share/apps/ngs-ccts/picard-tools/picard-tools-1.110/CollectInsertSizeMetrics.jar; fi
 module load R/R-3.0.1  # for Picard to make PDF
 
@@ -162,7 +159,8 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 
     export INDEX_ABBREV=`basename $REF_FASTA .fa`
     echo "INDEX_ABBREV=$INDEX_ABBREV"
-
+    
+    # output file
     export OUT_SEP=-
     export OUT_NAME=${SAMPLE_NAME}${OUT_SEP}${INDEX_ABBREV}${OUT_SEP}bwa${BWA_VER}
     export OUT_DIR=. # relative to WORKDIR
@@ -185,6 +183,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 	QSUB_NAME="${TASK_NAME}.${SAMPLE_NAME}.${INDEX_ABBREV}"
 	pushd ${WORK_DIR}
 	qsub -terse \
+	    $QSUB_DRMAA \
 	    -N $QSUB_NAME \
 	    -M $USER@uab.edu \
 	    -e ${JOB_DIR}/${QSUB_NAME}.$$.err.txt \
@@ -274,6 +273,8 @@ if [ -n "$JOB_ID"  ]; then
 	samtools flagstat ${BAM}
 
     # PICARD insertSizeMetrics
+    JAVA_RAM=$(( ($NSLOTS * 2 ) - 1 ))
+    JAVA_DRMAA="-Xms${JAVA_RAM}g -Xmx${JAVA_RAM}g" 
     OUT_FILE="${BAM_BASE}.fragstat"
     OUT_HIST="${BAM_BASE}.fraghist.pdf"
     run_step $SAMPLE_NAME $OUT_FILE PICARD_CollectInsertSizeMetrics - \
