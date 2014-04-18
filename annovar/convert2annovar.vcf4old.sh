@@ -19,8 +19,14 @@
 module load ngs-ccts/annovar/2013.09.11
 module list
 
-if [ -n "$1" ]; then VCF=$1; fi
+VCF=$1
+DEST=$2
 if [ -z "$VCF" ]; then VCF=uab_pad200_hg19.vcf; fi
+if [ ! -e "$VCF" ]; then echo "ERROR: $VCF: does not exist"; exit 1; fi
+if [ -z "$DEST" ]; then 
+    DEST=vcf4old.inc.com/`basename $VCF .vcf`.avinput
+fi
+
 if [[ "$VCF" == *hc_* ]]; then 
     # UAB generated HaploType caller - includes sites that failed QC, FILTER column is set appropriately
     FILTER="-filter PASS"
@@ -32,7 +38,7 @@ fi
 echo "VCF=$VCF"
 echo "FILTER=$FILTER"
 
-DEST=vcf4old.inc.com/`basename $VCF .vcf`.avinput
+
 mkdir -p `dirname $DEST`
 echo -n "START "; date;
 echo -n "HOST  $HOSTNAME aka "; hostname
