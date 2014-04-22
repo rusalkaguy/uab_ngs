@@ -255,7 +255,7 @@ if [ -n "$JOB_ID"  ]; then
     # .SAM.gz to sorted .BAM
     run_step $SAMPLE_NAME $UBAM "samtools_view" $UBAM \
 	zcat $SAM \|  \
-	sed "'s/\([1-9]\:N\:0\:[A-Z]*\)/BC\:Z\:\1/'" \| \
+	sed "'s/\([1-9]\:N\:[0-9][0-9]*\:[A-Z]*\)/BC\:Z\:\1/'" \| \
 	samtools view -bS -@ $NSLOTS -
     run_step $SAMPLE_NAME $BAM "samtools_sort" $BAM \
 	  samtools sort -@ $NSLOTS $UBAM $BAM_BASE
