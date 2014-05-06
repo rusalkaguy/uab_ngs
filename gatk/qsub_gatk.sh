@@ -226,7 +226,7 @@ if [ -n "$JOB_ID"  ]; then
 	CMD="java \
   	-Xmx22g \
 		-Djava.io.tmpdir=$TEMP \
-	-jar ${PICARD_DIR}MarkDuplicates.jar VALIDATION_STRINGENCY=SILENT CREATE_INDEX=True TMP_DIR=$TEMP MAX_RECORDS_IN_RAM=3000000 INPUT=${BWA_BAM_NAME} OUTPUT=${DEDUP_BAM_NAME} METRICS_FILE=${DEDUP_BAM_NAME}_metrics.txt ASSUME_SORTED=True"
+	-jar ${PICARD_DIR}MarkDuplicates.jar VALIDATION_STRINGENCY=SILENT CREATE_INDEX=True TMP_DIR=$TEMP MAX_RECORDS_IN_RAM=3000000 INPUT=${BWA_BAM_NAME} OUTPUT=${DEDUP_BAM_NAME} METRICS_FILE=${DEDUP_BAM_NAME}_metrics.txt ASSUME_SORTED=True"w
 	echo $CMD
 	$CMD 
 	RC=$?; if [ $RC != 0 ]; then echo;echo `date`"	TS	ERROR ${STEP_NAME}	${OUT_NAME}"; exit $RC; fi
@@ -316,7 +316,7 @@ if [ -n "$JOB_ID"  ]; then
 	    -knownSites:dbsnp,VCF $PUBLIC_VARIANT_DIR/dbsnp_137.hg19.vcf \
 	    -knownSites:mills,VCF $PUBLIC_VARIANT_DIR/Mills_and_1000G_gold_standard.indels.hg19.vcf \
 	    -knownSites:1000g,VCF $PUBLIC_VARIANT_DIR/1000G_phase1.indels.hg19.vcf \
-	    -cov ReadGroupCovariate \
+	    -cov ReadGroupCovariate \GRP
 	    -cov QualityScoreCovariate \
 	    -cov CycleCovariate \
 	    -cov ContextCovariate \

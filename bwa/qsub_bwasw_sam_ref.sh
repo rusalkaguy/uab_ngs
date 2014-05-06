@@ -8,8 +8,11 @@
 . /etc/profile.d/modules.sh          # enable module loading
 . ~/uab_ngs/uab_ngs_functions_v1.sh  # load shared run_cmd() & run_step()
 # load needed modules 
-module load  ngs-ccts/samtools-0.1.19
+module load  galaxy/galaxy-command-line # bcftools & samtools (0.1.12a (r862))
+#module load  ngs-ccts/samtools-0.1.19
 if [ -z "$BWA" ]; then export BWA="/share/apps/ngs-ccts/bwa-0.6.2/bwa"; fi
+if [ -z "$PICARD_DIR" ]; then export PICARD=/share/apps/ngs-ccts/picard-tools/picard-tools-1.110/picard-1.110.jar; fi
+
 #*** QSUB FLAGS ***
 #
 #$ -S /bin/sh
@@ -31,36 +34,13 @@ if [ -z "$BWA" ]; then export BWA="/share/apps/ngs-ccts/bwa-0.6.2/bwa"; fi
 CMD_LINE_PARAM_LIST="WORK_DIR SAMPLE_NAME CONTIG_FASTA REF_FASTA BAM_OUT"
 DERIVED_VAR_LIST="CMD_LINE HOSTNAME PROJECT_DIR DONE_ONLY QSUB_PE_OVERRIDE"
 
-QSUB_DRMAA="-l vf=1.9G -l h_vmem=2G" 
+QSUB_DRMAA="-l vf=5.9G -l h_vmem=6G" 
 
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} JOB_DIR"
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} BWA_VER BWA"
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} SAMTOOLS_VER SAMTOOLS"
+export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} PICARD_VER"
 
-# UTIL function
-run_cmd () { # ARGS: stdout_dest_or_- cmd [args]
-    TMPSTD=$1; shift  # redirect for stdout
-    TMPERR=`mktemp`
-    if [[ -z "$TMPSTD" || "-" == "$TMPSTD" ]]; then  
-	# stdout to stdout
-	echo "# CMD: $*" 
-	eval $* 2>$TMPERR
-    else
-	# stdout to file
-	echo "# CMD: $* 1>$TMPSTD" 
-	eval $* 2>$TMPERR 1>$TMPSTD
-    fi
-    RC=$?
-    if [ $RC != 0 ]; then 
-	echo "ERROR: $*"
-	echo "ERROR: "`cat $TMPERR`
-	exit 1; 
-    fi
-    return $RC
-}
-
-
-    
 #====================================================================== 
 # MASTER: submit-self on a head-node
 #====================================================================== 
@@ -119,7 +99,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
     for myvar in $CMD_LINE_PARAM_LIST ; do
 	eval $myvar=$1
 	export $myvar
-	echo -n "Z: $myvar	:"; eval echo \$$myvar
+	echo -n "$myvar	:"; eval echo \$$myvar
 	if [ -z "$1" ] ; then
 	    echo "$myvar	: MISSING"
 	    SCRIPT_NAME=`basename $0`
@@ -143,6 +123,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
     export BWA_DIR=`dirname $BWA`
     # get BWA abbreviations 
     export BWA_VER=`$BWA 2>&1 | grep "^Version" | cut -d " " -f 2  | sed -e 's/[.-]/_/g;'`
+    export PICARD_VER=`basename $PICARD_JAR .jar | cut -c 8-`
     export SAMTOOLS_VER=`samtools 2>&1 | grep "^Version" | cut -d " " -f 2  | sed -e 's/[.-]/_/g;'`
 
     # job dirs
@@ -155,7 +136,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 	    run_cmd - mkdir -p $MDIR
 	fi
     done
-exit
+
     # copy script to jobs
     cp $0 $JOB_DIR/`basename $0`.$JOB_NAME.$JOB_ID
 
@@ -165,7 +146,7 @@ exit
     if [ -z "$JOB_ID" ]; then
 	echo -n "${TASK_NAME}:${SAMPLE_NAME}:QSUB:"
 	QSUB_NAME=${TASK_NAME}-${SAMPLE_NAME}
-	pushd ${WORK_DIR}
+	pushd ${WORK_DIR} > /dev/null
 	qsub -terse \
 	    $QSUB_DRMAA \
 	    -N $QSUB_NAME \
@@ -173,7 +154,7 @@ exit
 	    -e ${JOB_DIR}/${QSUB_NAME}.$$.err.txt \
 	    -o ${JOB_DIR}/${QSUB_NAME}.$$.out.txt \
 	    $0
-	popd
+	popd > /dev/null
 	if [ $? != 0 ]; then echo "ERROR: bad return code from QSUB"; exit 1; fi
 	exit 0
     else
@@ -181,48 +162,6 @@ exit
     fi
 fi
 
-#====================================================================== 
-# UTIL FUNCTIONS
-#====================================================================== 
-run_step () { # ARGS: sample_name target_file step_name cmd_out cmd [cmd_args]
-    # args
-    RS_SAMPLE_NAME=$1; shift 1
-    RS_TARGET=$1; shift 1
-    RS_NAME=$1; shift 1
-    RS_STDOUT=$1; shift 1       # redirect for stdout
-
-    # log start/skip
-    if [[ ( -e "${RS_TARGET}" || -n "$DONE_ONLY" ) && ( -e "${RS_TARGET}.done" ) ]]; then
-	echo;echo `date`"	TS	SKIP ${RS_NAME}	${RS_SAMPLE_NAME}"; 
-    else
-	echo;echo `date`"	TS	START ${RS_NAME}	${RS_SAMPLE_NAME}"; 
-	
-	# run the cmd
-	RS_TMPERR=`mktemp`
-	if [[ -z "$RS_STDOUT" || "-" == "$RS_STDOUT" ]]; then  
-	    # stdout to stdout
-	    echo "# CMD: $*" 
-	    $* 2>$RS_TMPERR
-	else
-    	    # stdout to file
-	    echo "# CMD: $* 1>$RS_STDOUT" 
-	    $* 2>$RS_TMPERR 1>$RS_STDOUT
-	fi
-    fi
-    #  handle errors
-    RC=$?
-    if [ $RC != 0 ]; then 
-	echo "ERROR: $*"
-	echo "ERROR: "`cat $RS_TMPERR`
-	echo;echo `date`"	TS	ERROR ${RS_NAME}	${RS_SAMPLE_NAME}"
-	exit $RC
-    fi
-    # handle success
-    touch ${RS_TARGET}.done
-    echo;echo `date`"	TS	DONE ${RS_NAME}	${RS_SAMPLE_NAME}"; 
-    
-    return $RC
-}
 
 #====================================================================== 
 # actual slave work
@@ -261,7 +200,7 @@ if [ -n "$JOB_ID"  ]; then
     #
 
     # create bwa version index dir
-    export BWA_INDEX_DIR=`dirname ${REF_FASTA}/bwa_${BWA_VER}`
+    export BWA_INDEX_DIR=`dirname ${REF_FASTA}`/bwa_${BWA_VER}
     mkdir -p ${BWA_INDEX_DIR}
     
     # link wrapped reference
@@ -270,7 +209,7 @@ if [ -n "$JOB_ID"  ]; then
 	ln -sf $REF_FASTA_WRAPPED $REF_LINK
     
     # index with BWA, based on length.
-    export BWA_REF_INDEXED=${REF_FASTA_WRAPPED}.bwa${BWA_VER}
+    export BWA_REF_INDEXED=$REF_LINK
     if [ ! -e "${BWA_REF_INDEXED}.bwt" ]; then
 	# decide which indexing option
 	REF_SIZE=`wc -c ${REF_FASTA} | cut -d " " -f 1`
@@ -285,7 +224,7 @@ if [ -n "$JOB_ID"  ]; then
     fi
     echo "BWA_REF_INDEXED=$BWA_REF_INDEXED"
     run_step $SAMPLE_NAME $BWA_REF_INDEXED.bwt BWA_index_ref_fasta - \
-	$BWA index -a $BWA_INDEX_TYPE -p $BWA_REF_INDEXED $REF_FASTA    
+	$BWA index -a $BWA_INDEX_TYPE -p $BWA_REF_INDEXED $REF_LINK
 
     # BWA SW alignment
     SAM_ALIGN=$BAM_OUT.aligned.unsorted.sam
@@ -318,13 +257,25 @@ if [ -n "$JOB_ID"  ]; then
     run_step $SAMPLE_NAME $FLAGSTAT_OUT SAMTOOLS_flagstat $FLAGSTAT_OUT \
 	samtools flagstat $BAM_OUT
 
+    # Flagstat of alignment
+    FRAGSIZE_OUT=${BAM_OUT}.fragstat
+    FRAGSIZE_HIST=${BAM_OUT}.fragstat_hist
+    run_step $SAMPLE_NAME $FLAGSTAT_HIST PICARD_CollectInsertSizeMetrics $FLAGSTAT_OUT \
+	java -Xmx5500m $PICARD_JAR \
+	INPUT=$BAM_OUT \
+	OUTPUT=$FRAGSIZE_OUT \
+	HISTOGRAM_FILE=$FRAGSIZE_HIST
+	
+    
+    
+
     # SAMTOOLs PILEUP -> VCF
     SAMTOOLS_REF_INDEXED=${REF_FASTA}.fai
     run_step $SAMPLE_NAME $SAMTOOLS_REF_INDEXED SAMTOOLS_index_contigs -  \
 	samtools faidx ${REF_FASTA_WRAPPED}
     BCF_RAW=${BAM_OUT}.raw.bcf
     run_step $SAMPLE_NAME $BCF_RAW SAMTOOLS_mpileup_vcf $BCF_RAW  \
-	samtools mpileup -C50 -g -f ${REF_FASTA_WRAPPED} $BAM_OUT 
+	samtools mpileup -C50 -g --f ${REF_FASTA_WRAPPED} $BAM_OUT 
     VCF_OUT=${BAM_OUT}.vcf
     run_step $SAMPLE_NAME $VCF_OUT SAMTOOLS_mpileup_vcf $VCF_OUT  \
 	bcftools view -cv $BCF_RAW

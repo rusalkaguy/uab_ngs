@@ -12,7 +12,7 @@ my $key_env = "GALAXY_API_KEY";
 my $dataset_status = "ok";
 
 my %opts;  # option are in %opts
-if( !getopts('vqubg:k:h:d:s:t:l:c:f:', \%opts) ) {
+if( !getopts('vHqubg:k:h:d:s:t:l:c:f:', \%opts) ) {
     print <<EOF
 $0:  
 # --- connection info ---
@@ -20,6 +20,7 @@ $0:
 # g = galaxy URL [$galaxy_url]
 # --- output ---
 # v = verbose [default: no]
+# H = history metadata
 # q = DONT print header line
 # u = DONT print obj URLs
 # b = Bracket fields
@@ -66,6 +67,9 @@ if( !$opts{q} ) {
 	       "object.type",
 	       "history.name",
 	       "object.url",
+	       "history.nice_size",
+	       "history.deleted",
+	       "history.published",
 	       "dataset.name",
 	       "dataset.type",
 	       "dataset.state",
@@ -77,7 +81,7 @@ if( !$opts{q} ) {
 
 	       
 	       
-# get histories
+# get history list
 my $histories_url = $opts{g}."/api/histories".$key_url;
 if( $opts{v} ) {print "# Fetching $histories_url\n"; }
 my $histories = get($histories_url);
@@ -86,7 +90,7 @@ my $j = from_json($histories);
 if( $opts{v} ) {print "# got ", scalar(@{$j}), " histories\n"; }
 
 
-# filter histories by name
+# filter NAMES of histories
 my @matches = @{$j};
 if( $opts{h} ) {
     @matches = grep { $_->{name} =~ m/$opts{h}/i } @{$j};
@@ -94,18 +98,32 @@ if( $opts{h} ) {
 }
 # list matching histories
 foreach my $e ( @matches ) {
+    # check if we need details on the history
+    my $h_info;
+    if( $opts{H} ) {
+	if( $opts{v} ) {print "# get ", $opts{g}.$e->{url},"\n"; }
+	$h_info = from_json(get($opts{g}.$e->{url}.$key_url));    
+	#print Dumper($h_info);
+    }
+
+    # format output
     $e->{tsv} = join( $field_join, "history", $e->{name},
 		      # optional URL
-		      $opts{u}?"":($opts{g}.$e->{url}) 
+		      $opts{u}?"":($opts{g}.$e->{url}),
+		      # optional history info size
+		      $h_info->{nice_size},
+		      $h_info->{deleted},
+		      $h_info->{published},
 		      );
     if( !$opts{d} ) {
 	print $field_start, $e->{tsv}, $field_end, "\n";
     }
 }
 
-# filter datasets by name (optional)
-if( $opts{d} ) {
+# process CONTENTS of histories
+if( $opts{d} || $opts{t} ) {
     foreach my $h (@matches) {
+	# get history CONTENTS
 	if( $opts{v} ) {print "#",$h->{tsv},"\n"; }
 	my $hist_url=$opts{g}.$h->{url}."/contents";
 	if( $opts{v} ) {print "# get ",$hist_url,"\n"; }
@@ -113,54 +131,60 @@ if( $opts{d} ) {
 	if( $opts{v} ) {print "# got ", length($contents), " bytes\n"; }
 	my $jcontents = from_json($contents);
 	if( $opts{v} ) {print "# got ", scalar(@{$jcontents}), " datasets\n"; }
-	foreach my $d ( grep {$_->{name} =~ m/$opts{d}/i } @{$jcontents} ) {
-	    # get details on each data set that matched
-	    my $jinfo = from_json(get($opts{g}.$d->{url}.$key_url));
-	    # filter dataset by state (optional)
-	    if( !$opts{s} || $jinfo->{state} =~ m/$opts{s}/i ) {
-		# filter dataset by data_type (optional)
-		if( !$opts{t} || $jinfo->{data_type} =~ m/$opts{t}/i ) {
-		    print $field_start, join($field_join, "dataset",
-			       $h->{name},
-			       $opts{u}?"":($opts{g}.$d->{url}),
-			       $d->{name},
-			       $d->{type}, 
-			       $jinfo->{state}, 
-			       $jinfo->{data_type}, 
-			       $jinfo->{file_size},
-			       $jinfo->{file_name}
-			       ), $field_end, "\n";
-		    # check if should symlink
-		    if( $opts{c} || $opts{l} ) {
-			# map dataset data_type to file extension
-			my $file_ext = $jinfo->{data_type};
-			if( $ext_map->{$file_ext} ) { 
-			    if($opts{v}) { print "# mapped $file_ext to $ext_map->{$file_ext}\n"; }
-			    $file_ext=$ext_map->{$file_ext};
-			}
-			# clean up dataset name to be a file name
-			my $clean_name = $jinfo->{name};
-			$clean_name =~ s/[^A-Za-z0-9\-\.]/_/g;
-			$clean_name .= ".".$file_ext;
-			# copy files out
-			if($opts{c}) {
-			    my @args = ("cp",$jinfo->{file_name}, $opts{c}."/".$clean_name);
-			    if($opts{v}) {print "# ",join(" ",@args),"\n";}
-			    my $status = system(@args);
-			    if( ($status>>=8) != 0 ) {
-				print "# ERROR: ",join(" ", @args), ": ", $?, "\n";
+
+
+	if( $opts{d} ) {
+	    # filter datasets by name (optional)
+
+	    foreach my $d ( grep {$_->{name} =~ m/$opts{d}/i } @{$jcontents} ) {
+		# get details on each data set that matched
+		my $jinfo = from_json(get($opts{g}.$d->{url}.$key_url));
+		# filter dataset by state (optional)
+		if( !$opts{s} || $jinfo->{state} =~ m/$opts{s}/i ) {
+		    # filter dataset by data_type (optional)
+		    if( !$opts{t} || $jinfo->{data_type} =~ m/$opts{t}/i ) {
+			print $field_start, join($field_join, "dataset",
+						 $h->{name},
+						 $opts{u}?"":($opts{g}.$d->{url}),
+						 $d->{name},
+						 $d->{type}, 
+						 $jinfo->{state}, 
+						 $jinfo->{data_type}, 
+						 $jinfo->{file_size},
+						 $jinfo->{file_name}
+						 ), $field_end, "\n";
+			# check if should symlink
+			if( $opts{c} || $opts{l} ) {
+			    # map dataset data_type to file extension
+			    my $file_ext = $jinfo->{data_type};
+			    if( $ext_map->{$file_ext} ) { 
+				if($opts{v}) { print "# mapped $file_ext to $ext_map->{$file_ext}\n"; }
+				$file_ext=$ext_map->{$file_ext};
 			    }
-			}
-			# link files out
-			if($opts{l}) {
-			    my @args = ("ln","-sf",$jinfo->{file_name}, $opts{l}."/".$clean_name);
-			    if($opts{v}) {print "# ",join(" ",@args),"\n";}
-			    my $status = system(@args);
-			    if( ($status>>=8) != 0 ) {
-				print "# ERROR: ",join(" ", @args), ": ", $?, "\n";
+			    # clean up dataset name to be a file name
+			    my $clean_name = $jinfo->{name};
+			    $clean_name =~ s/[^A-Za-z0-9\-\.]/_/g;
+			    $clean_name .= ".".$file_ext;
+			    # copy files out
+			    if($opts{c}) {
+				my @args = ("cp",$jinfo->{file_name}, $opts{c}."/".$clean_name);
+				if($opts{v}) {print "# ",join(" ",@args),"\n";}
+				my $status = system(@args);
+				if( ($status>>=8) != 0 ) {
+				    print "# ERROR: ",join(" ", @args), ": ", $?, "\n";
+				}
 			    }
-			}
-		    }		    
+			    # link files out
+			    if($opts{l}) {
+				my @args = ("ln","-sf",$jinfo->{file_name}, $opts{l}."/".$clean_name);
+				if($opts{v}) {print "# ",join(" ",@args),"\n";}
+				my $status = system(@args);
+				if( ($status>>=8) != 0 ) {
+				    print "# ERROR: ",join(" ", @args), ": ", $?, "\n";
+				}
+			    }
+			}		    
+		    }
 		}
 	    }
 	}

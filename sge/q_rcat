@@ -16,6 +16,7 @@
 #
 if [ -n "$Q_TARGET_FILE" ]; then 
     echo "I'm a q_rcat slave:  $Q_CMD_STR $Q_TARGET_FILE > $Q_OUTPUT_FILE"
+    export TMP=/scratch/user/$USER/tmp; export TMPDIR=$TMP; export TEMP=$TMP; mkdir -p $TMP
     printenv
     eval "cat $Q_TARGET_FILE | $Q_CMD_STR " > $Q_OUTPUT_FILE
     exit $?
@@ -73,7 +74,8 @@ for targ in $*; do
 	   # qsub a job to decompress that file
 	   echo -n "$filedir: "
 	   Q_OUTPUT_FILE=`echo ${filedir} | sed "s/${Q_TARGET_EXT}\$/${Q_OUTPUT_EXT}/"`
-  	   qsub -terse -M $USER@uab.edu -v Q_TARGET_FILE=$filedir -v Q_CMD_STR="$Q_CMD_STR" -v Q_OUTPUT_FILE=$Q_OUTPUT_FILE $0
+  	   qsub -terse -M $USER@uab.edu \
+	       -v Q_TARGET_FILE=$filedir -v Q_CMD_STR="$Q_CMD_STR" -v Q_OUTPUT_FILE=$Q_OUTPUT_FILE $0
         done
    else 
 	# Obtain the full directory path to the file
@@ -82,7 +84,8 @@ for targ in $*; do
 	# qsub a job to decompress that file
 	echo -n "$filedir: "
         Q_OUTPUT_FILE=`echo ${filedir} | sed "s/${Q_TARGET_EXT}\$/${Q_OUTPUT_EXT}/"`
- 	qsub -terse -M $USER@uab.edu -v Q_TARGET_FILE=$filedir -v Q_CMD_STR="$Q_CMD_STR" -v Q_OUTPUT_FILE=$Q_OUTPUT_FILE $0
+ 	qsub -terse -M $USER@uab.edu \
+	    -v Q_TARGET_FILE=$filedir -v Q_CMD_STR="$Q_CMD_STR" -v Q_OUTPUT_FILE=$Q_OUTPUT_FILE $0
    fi	
 done
 

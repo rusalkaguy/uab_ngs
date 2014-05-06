@@ -1,6 +1,6 @@
 #!/bin/bash
 NAME_LEN=10 
-if [[ "$1" != -* ]]; then NAME_LEN=$1 ; shift 1; fi
+if [[ -n "$1" && "$1" != -* ]]; then NAME_LEN=$1 ; shift 1; fi
 END_C=`expr 16 + $NAME_LEN`
 echo "  COUNT JOB[$NAME_LEN]"
 qstat $* | cut -c 17-$END_C,40-43 | sort | uniq -c | grep -v "1 -----" | grep -v "1 name"

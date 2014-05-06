@@ -5,10 +5,14 @@
 # 
 # qsub_master_slave.sh [-debug|-inline] WORK_DIR SAMPLE_NAME INFILE
 #
+# built from 
+# https://www.broadinstitute.org/gatk/guide/best-practices
+# http://wiki.bits.vib.be/index.php/GATK_HaplotypeCaller_Analysis_of_BWA_(mem)_mapped_Illumina_reads
+#
 ########################################################################
 # libraries to load
 . /etc/profile.d/modules.sh          # enable module loading
-. ~/uab_ngs/uab_ngs_functions_v1.sh  # load shared run_cmd() & run_step()
+. ~/uab_ngs/uab_ngs_functions_v2.sh  # load shared run_cmd() & run_step()
 #*** QSUB FLAGS ***
 #$ -S /bin/bash
 #$ -cwd # remember what dir I'm launched in 

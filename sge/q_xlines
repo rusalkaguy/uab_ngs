@@ -88,7 +88,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline"|| "$1" == "-debug" ]]; then
 
     # get command & args
     export XARGS_CMD="$*"
-    export XARGS_CMD_NAME=`echo $XARGS_CMD | perl -pe 's/ +/_/g;s/:/./g;s/[^a-z0-9._-]//gi;'`
+    export XARGS_CMD_NAME=`echo $XARGS_CMD | perl -pe 's|^[./]+||;s/ +/_/g;s/:/./g;s/[^a-z0-9._-]//gi;'`
 
     # get my own location in a portable manner
     if [[ $0 == /* ]]; then JOB_SCRIPT=$0; else JOB_SCRIPT=`pwd`/$0; fi

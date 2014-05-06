@@ -61,9 +61,12 @@ OPERATOR+=,f; PROTOCOL+=,1000g2012apr_eur; OP_ARGS+=, #OP_ARGS+=",-maf 0.05", # 
 #OPERATOR+=,f; PROTOCOL+=,snp129; OP_ARGS+=, # last pre 1000g dbSNP
 #OPERATOR+=,f; PROTOCOL+=,snp137; OP_ARGS+=, # latest
 #OPERATOR+=,f; PROTOCOL+=,snp137NonFlagged; OP_ARGS+=, # Flagged SNPs include SNPs < 1% minor allele frequency (MAF) (or unknown), mapping only once to reference assembly, flagged in dbSnp as "clinically associated". 
-OPERATOR+=,f; PROTOCOL+=,ljb2_sift; OP_ARGS+=, # remove "benign" snps
 
-OPERATOR+=,f; PROTOCOL+=,ljb2_pp2hdiv; OP_ARGS+=, # remove "benign" snps
+# this does REMOVE(pp=benign OR sift=benign) - we want REMOVE(pp=benign AND sift=benign)!!!
+# don't think we can express that AND in this script
+#OPERATOR+=,f; PROTOCOL+=,ljb2_sift; OP_ARGS+=, # remove "benign" snps
+#OPERATOR+=,f; PROTOCOL+=,ljb2_pp2hdiv; OP_ARGS+=, # remove "benign" snps
+
   # ljb2_pp2hvar should be used for diagnostics of Mendelian diseases, which requires distinguishing mutations with drastic effects from all the remaining human variation, including abundant mildly deleterious alleles.The authors recommend calling "probably damaging" if the score is between 0.909 and 1, and "possibly damaging" if the score is between 0.447 and 0.908, and "benign" is the score is between 0 and 0.446
   # ljb2_pp2hdiv should be used when evaluating rare alleles at loci potentially involved in complex phenotypes, dense mapping of regions identified by genome-wide association studies, and analysis of natural selection from sequence data. The authors recommend calling "probably damaging" if the score is between 0.957 and 1, and "possibly damaging" if the score is between 0.453 and 0.956, and "benign" is the score is between 0 and 0.452.
 

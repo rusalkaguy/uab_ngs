@@ -35,6 +35,12 @@ echo "OUT=$OUT"
 # gene annotations
 OPERATOR+=g; PROTOCOL+=refGene; OP_ARGS+=
 
+# CADD
+# not decompressed successfully OPERATOR+=,f; PROTOCOL+=,cadd; OP_ARGS+=, # FULL CADD database
+#OPERATOR+=,f; PROTOCOL+=,caddgt20; OP_ARGS+=-otherinfo, # Highest 20% of CADD scores database
+OPERATOR+=,f; PROTOCOL+=,caddgt10; OP_ARGS+=,-otherinfo # Highest 10% of CADD scores database
+
+
 # region annotations
 
 OPERATOR+=,r; PROTOCOL+=,phastConsElements46way; OP_ARGS+=,
@@ -45,6 +51,9 @@ OPERATOR+=,r; PROTOCOL+=,wgEncodeBroadHmmGm12878HMM; OP_ARGS+=, # blood cell lin
 
 # filter annotations
 
+
+
+# MAFs
 OPERATOR+=,f; PROTOCOL+=,1000g2012apr_eur; OP_ARGS+=, # 1000 Genomes Project (2012 April) EUR allele freq
 OPERATOR+=,f; PROTOCOL+=,1000g2012apr_all; OP_ARGS+=, # 1000 Genomes Project (2012 April) ALL-samples allele freq
 OPERATOR+=,f; PROTOCOL+=,popfreq_max; OP_ARGS+=, # Max pop freq across 
@@ -52,9 +61,13 @@ OPERATOR+=,f; PROTOCOL+=,popfreq_max; OP_ARGS+=, # Max pop freq across
 OPERATOR+=,f; PROTOCOL+=,esp6500si_all; OP_ARGS+=, # NHLBI exome over 6000 healthy + disease http://www.openbioinformatics.org/annovar/annovar_filter.html#esp
 OPERATOR+=,f; PROTOCOL+=,esp6500si_ea; OP_ARGS+=, # European Ancestry
 OPERATOR+=,f; PROTOCOL+=,cg46; OP_ARGS+=, # Complete Genomics 46 unrelated healthy people (WGS)
+
+# DB SNP
 OPERATOR+=,f; PROTOCOL+=,snp129; OP_ARGS+=, # last pre 1000g dbSNP
 OPERATOR+=,f; PROTOCOL+=,snp137; OP_ARGS+=, # latest
 OPERATOR+=,f; PROTOCOL+=,snp137NonFlagged; OP_ARGS+=, # Flagged SNPs include SNPs < 1% minor allele frequency (MAF) (or unknown), mapping only once to reference assembly, flagged in dbSnp as "clinically associated". 
+
+# IMPACT
 OPERATOR+=,f; PROTOCOL+=,ljb2_all; OP_ARGS+=, # 
 
 echo -n "START "; date

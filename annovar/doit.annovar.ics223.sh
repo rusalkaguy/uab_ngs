@@ -11,8 +11,9 @@ ABBREV_IN=$2
 echo `# CMD: basename $0`" $*"
 
 AVINPUT=vcf4old.inc.com/`basename $VCF_IN .vcf`.avinput
-FILTERED_AVINPUT=vcf4old.inc.com/`basename $VCF_IN .vcf`.reduce.step4.varlist
-MULTIANNO_TXT=vcf4old.inc.com/`basename $VCF_IN .vcf`.reduce.step4.varlist.hg19_multianno.txt
+FILTERED_AVINPUT=vcf4old.inc.com/`basename $VCF_IN .vcf`.reduce.step2.varlist  # step2 = # of steps in doit.variant_reductions.sh - need a ln -s for final to be less fragile
+MULTIANNO_TXT=${FILTERED_AVINPUT}.hg19_multianno.txt  
+MULTIANNO_HFILT_TXT=${FILTERED_AVINPUT}.hg19_multianno.hfilt.txt  
 CASECONTROL_VCF=`basename $VCF_IN .vcf`.caseControl.vcf
 CASECONTROL_TXT=`basename $VCF_IN .vcf`.caseControl.txt
 OUT_DATA=`basename $VCF_IN .vcf`.caseControl.annovar.data.txt
@@ -48,8 +49,18 @@ echo "#"
 echo "# ANNOVAR: annotate remaining variants"
 echo "#"
 OUTPUT=$MULTIANNO_TXT
-if [ -e "$OUTPUT" ]; then echo "SKIP"; else
+#if [ -e "$OUTPUT" ]; then echo "SKIP"; else
     ~/uab_ngs/annovar/doit.table_annovar.sh $FILTERED_AVINPUT
+#fi
+echo "# OUTPUT=$OUTPUT"
+
+echo ""
+echo "#"
+echo "# ANNOVAR: hand-filter annotated variants"
+echo "#"
+OUTPUT=$MULTIANNO_HFILT_TXT
+if [ -e "$OUTPUT" ]; then echo "SKIP"; else
+    ~/uab_ngs/annovar/doit.table_hfilt.sh $MULTIANNO_TXT
 fi
 echo "# OUTPUT=$OUTPUT"
 echo ""

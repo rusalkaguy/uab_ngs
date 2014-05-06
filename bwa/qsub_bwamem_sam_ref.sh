@@ -26,8 +26,9 @@
 # email at:  Begining, End, Abort, Suspend
 #$ -m beas  
 # ** RUN TIME ** 
-#$ -l h_rt=119:00:00
-#$ -l s_rt=120:55:00
+## -l h_rt=119:00:00 -l s_rt=120:55:00 # 5 days
+## -l h_rt=48:00:00 -l s_rt=47:55:00 # 2 days
+#$ -l h_rt=12:00:00 -l s_rt=11:55:00 # 1/2 day
 #
 # *** output logs ***
 #$ -e jobs/$JOB_NAME.$JOB_ID.err
@@ -41,12 +42,15 @@ DERIVED_VAR_LIST="CMD_LINE HOSTNAME PROJECT_DIR REV_FASTQ DONE_ONLY QSUB_PE_OVER
 QSUB_DRMAA="-pe smp 4 -l vf=1.9G -l h_vmem=2G" 
 if [ -z "$NSLOTS" ]; then export NSLOTS=4; fi  # for debugging
 
+export TEMP=/scratch/user/$USER/tmp
 # load needed modules 
 # we hit the exe directly
 module load ngs-ccts/bwa/0.7.7
 module load ngs-ccts/samtools/0.1.19
-if [ -z "$PICARD_JAR" ]; then PICARD_JAR=/share/apps/ngs-ccts/picard-tools/picard-tools-1.110/CollectInsertSizeMetrics.jar; fi
+if [ -z "$PICARD_DIR" ]; then PICARD_DIR=/share/apps/ngs-ccts/picard-tools/picard-tools-1.110; fi
 module load R/R-3.0.1  # for Picard to make PDF
+if [ -z "$IGVTOOLS_JAR" ]; then IGVTOOLS=/share/apps/ngs-ccts/IGVTools/IGVTools_2.3.32/igvtools.jar; fi
+if [ -z "$GATK_JAR" ]; then GATK_JAR=/share/apps/ngs-ccts/GenomeAnalysisTK/GenomeAnalysisTK-3.1-1/GenomeAnalysisTK.jar; fi
 
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} FASTQ_DIR JOB_DIR"
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} BWA_VER BWA"
@@ -105,13 +109,6 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 	    echo "**** -PE OVERRIDE=$QSUB_PE_OVERRIDE **** ) " 
 	    shift 1
 	    shift 1
-	    shift 1
-	    continue
-	fi
-	# check for -no_pileup  over-ride
-	if [[ "-no_pileup" == "$1" || "-no_vcf" == "$1" ]]; then
-	    echo "**** -NO_PILEUP/-NO_VCF **** " 
-	    export NO_PILEUP=true
 	    shift 1
 	    continue
 	fi
@@ -243,10 +240,10 @@ if [ -n "$JOB_ID"  ]; then
 
     # run_step(SAMPLE_NAME,TARGET,STEP_NAME,STDOUT,cmd...)
     echo "FWD_FASTQ=$FWD_FASTQ"
-    # -R \"$RG_NAME\" \  # readgroup
     run_step $SAMPLE_NAME $SAM "BWA_mem" $SAM \
 	$BWA mem -t $NSLOTS \
 	-M -C \
+	-R "'@RG\tID:${SAMPLE_NAME}\tSM:${SAMPLE_NAME}'" \
 	$BWA_REF_INDEXED \
 	$FWD_FASTQ $REV_FASTQ \
 	\| gzip 
@@ -260,6 +257,7 @@ if [ -n "$JOB_ID"  ]; then
     run_step $SAMPLE_NAME $BAM "samtools_sort" $BAM \
 	  samtools sort -@ $NSLOTS $UBAM $BAM_BASE
 
+
     # SAMTools index
     BAI=${OUT_DIR}/${OUT_NAME}.bai
     # run_step(SAMPLE_NAME,TARGET,STEP_NAME,STDOUT,cmd...)
@@ -272,43 +270,243 @@ if [ -n "$JOB_ID"  ]; then
     run_step $SAMPLE_NAME $FLAGSTAT_OUT "samtools_index" $FLAGSTAT_OUT \
 	samtools flagstat ${BAM}
 
+
     # PICARD insertSizeMetrics
     JAVA_RAM=$(( ($NSLOTS * 2 ) - 1 ))
-    JAVA_DRMAA="-Xms${JAVA_RAM}g -Xmx${JAVA_RAM}g" 
+    JAVA_DRMAA="-Xms${JAVA_RAM}g -Xmx${JAVA_RAM}g  -Djava.io.tmpdir=$TEMP" 
     OUT_FILE="${BAM_BASE}.fragstat"
     OUT_HIST="${BAM_BASE}.fraghist.pdf"
     run_step $SAMPLE_NAME $OUT_FILE PICARD_CollectInsertSizeMetrics - \
 	java $JAVA_DRMAA \
 	-Djava.io.tmpdir='/scratch/share/galaxy/temp' \
-	-jar $PICARD_JAR \
+	-jar ${PICARD_DIR}/CollectInsertSizeMetrics.jar \
 	VALIDATION_STRINGENCY=LENIENT \
 	ASSUME_SORTED=true \
 	INPUT=$BAM \
 	OUTPUT=$OUT_FILE \
 	HISTOGRAM_FILE=$OUT_HIST 
 
+    # PICARD de-dup
+    BAM_DEDUP=${BAM_BASE}.dedup.bam
+    BAI_DEDUP=${BAM_BASE}.dedup.bai
+    DEDUP_MATRICS=${BAM_BASE}.dedup.metrics.txt
+    run_step $SAMPLE_NAME $BAM_DEDUP PICARD_dedup - \
+	java $JAVA_DRMAA \
+	-jar ${PICARD_DIR}/MarkDuplicates.jar \
+	VALIDATION_STRINGENCY=SILENT \
+	CREATE_INDEX=True \
+	TMP_DIR=$TEMP \
+	MAX_RECORDS_IN_RAM=3000000 \
+	INPUT=${BAM} \
+	OUTPUT=${BAM_DEDUP} \
+	METRICS_FILE=${DEDUP_METRICS} \
+	ASSUME_SORTED=True
+    # SAMTools index
+    # run_step(SAMPLE_NAME,TARGET,STEP_NAME,STDOUT,cmd...)
+    run_step $SAMPLE_NAME $BAI_DEDUP "samtools_index" - \
+	samtools index ${BAM_DEDUP} ${BAI_DEDUP}
 
-    if [ -z "$NO_PILEUP" ]; then
-	# SAMTOOLs PILEUP -> VCF
-	SAMTOOLS_REF_INDEXED=${REF_FASTA}.fai
-	run_step $SAMPLE_NAME $SAMTOOLS_REF_INDEXED SAMTOOLS_index_ref -  \
-	    samtools faidx ${REF_FASTA}
-	BCF_RAW=${BAM}.raw.bcf
-	run_step $SAMPLE_NAME $BCF_RAW SAMTOOLS_mpileup_vcf $BCF_RAW  \
-	    samtools mpileup -C50 -g -f ${REF_FASTA} $BAM 
-	VCF_OUT=${BAM}.vcf
-	run_step $SAMPLE_NAME $VCF_OUT SAMTOOLS_mpileup_vcf $VCF_OUT  \
-	    bcftools view -cv $BCF_RAW
+    # IGVTools Coverage
+    COV_W=10 # window 
+    COV_REF=~/igv/genomes/hcmvMerlin.genome
+    if [[ "$INDEX_ABBREV" == *TR-BAC* ]]; then COV_REF=~/igv/genomes/hcmvTR-BAC.genome; fi
+    OUT_COV="${BAM_BASE}.cov.w${COV_W}.wig"
+    run_step $SAMPLE_NAME $OUT_COV IGVTOOLS_count - \
+	java $JAVA_DRMAA \
+	-Djava.awt.headless=true -jar $IGVTOOLS \
+	count \
+	-z 10 -w $COV_W -e 0 \
+	${BAM} \
+	${OUT_COV} \
+	${COV_REF}
+
+    # GATK DepthOfCoverage (requires RG)
+    OUT_DOC=${BAM_BASE}.gatk_doc
+    run_step $SAMPLE_NAME $OUT_DOC GATK_DepthOfCoverage - \
+	java $JAVA_DRMAA \
+	-jar $GATK_JAR \
+	-T DepthOfCoverage \
+	-R ${REF_FASTA} \
+	-I ${BAM} \
+	-ct 10 -ct 100 -ct 250 -ct 500 -ct 1000 \
+	--out $OUT_DOC
+
+    # GATK re-align targets
+    GATK_REALIGN_INTERVALS=${BAM_BASE}.dedup.intervals
+    run_step $SAMPLE_NAME $GATK_REALIGN_INTERVALS GATK_realign_create_targets - \
+	java $JAVA_DRMAA \
+	-jar ${GATK_JAR} \
+	-nt $NSLOTS \
+	-T RealignerTargetCreator \
+        -R ${REF_FASTA} \
+	-I ${BAM_DEDUP} \
+	-o ${GATK_REALIGN_INTERVALS} 
+    BAM_REALIGN=${BAM_BASE}.dedup.realign.bam
+    BAI_REALIGN=${BAM_BASE}.dedup.realign.bai
+    run_step $SAMPLE_NAME $BAM_REALIGN GATK_realign - \
+	java $JAVA_DRMAA \
+	-jar ${GATK_JAR} \
+	-T IndelRealigner \
+        -R ${REF_FASTA} \
+	-I ${BAM_DEDUP} \
+	-targetIntervals ${GATK_REALIGN_INTERVALS} \
+	-o ${BAM_REALIGN}
+    # SAMTools index
+    run_step $SAMPLE_NAME $BAI_REALIGN "samtools_index" - \
+	samtools index ${BAM_REALIGN} ${BAI_REALIGN}
+
+    if [ 1 == 0 ]; then
+        # GATK recalibrator
+	RECAL_BQSR=${BAM_BASE}.dedup.realign.bqsr
+	BAM_RECAL=${BAM_BASE}.dedup.realign.recal.bam
+	BAI_RECAL=${BAM_BASE}.dedup.realign.recal.bai
+	run_step $SAMPLE_NAME $RECAL_BQSR GATK_recalibrator - \
+	    java $JAVA_DRMAA \
+	    -jar ${GATK_JAR} \
+	    -T BaseRecalibrator \
+	    -cov QualityScoreCovariate \
+	    -cov CycleCovariate \
+	    -cov ContextCovariate \
+	    -R ${REF_FASTA} \
+	    -I ${BAM_REALIGN} \
+	    -o ${BAM_RECAL}
+	run_step $SAMPLE_NAME $RECAL_BQSR GATK_printReads - \
+	    java $JAVA_DRMAA \
+	    -jar ${GATK_JAR} \
+	    -T PrintReads \
+	    -R ${REF_FASTA} \
+	    -I ${BAM_REALIGN} \
+	    -BQSR $RECAL_BQSR \
+	    -o ${BAM_RECAL}
+	# SAMTools index
+	run_step $SAMPLE_NAME $BAI_RECAL "samtools_index" - \
+	    samtools index ${BAM_RECAL} ${BAI_RECAL}
     fi
 
-    # kick off GATK, if desired
+    # GATK UnifiedGenotype (VCF)
+    UG_P1_VCF=${BAM_BASE}.p1.vcf
+    # can also use -nct : better because less mem? 
+    # --output_mode EMIT_ALL_SITES \
+    run_step $SAMPLE_NAME $UG_P1_VCF GATK_UG - \
+	java $JAVA_DRMAA \
+	-jar ${GATK_JAR} \
+	-nt ${NSLOTS} \
+	-T UnifiedGenotyper \
+	-R ${REF_FASTA} \
+	-ploidy 1 \
+	-glm BOTH \
+	-stand_call_conf 20 \
+	-stand_emit_conf 20 \
+	-I ${BAM_REALIGN} \
+	-o ${UG_P1_VCF}
+
+    UG_P10_VCF=${BAM_BASE}.p10.vcf
+    UG_P10AF_VCF=${BAM_BASE}.p10.af.vcf
+    # can also use -nct : better because less mem? 
+    run_step $SAMPLE_NAME $UG_P10_VCF GATK_UG - \
+	java $JAVA_DRMAA \
+	-jar ${GATK_JAR} \
+	-nt ${NSLOTS} \
+	-T UnifiedGenotyper \
+	-R ${REF_FASTA} \
+	-ploidy 10 \
+	-stand_emit_conf 20 \
+	-glm BOTH \
+	-I ${BAM_REALIGN} \
+	-o ${UG_P10_VCF}
+    # filter to just partialy penatrant variants
+    run_step $SAMPLE_NAME $UG_P10AF_VCF grep_AF_not_1  $UG_P10AF_VCF \
+        grep -v "AF=1.00" $UG_P10_VCF 
+
+    UG_P20_VCF=${BAM_BASE}.p20.vcf
+    UG_P20AF_VCF=${BAM_BASE}.p20.af.vcf
+    # can also use -nct : better because less mem? 
+    run_step $SAMPLE_NAME $UG_P20_VCF GATK_UG - \
+	java $JAVA_DRMAA \
+	-jar ${GATK_JAR} \
+	-nt ${NSLOTS} \
+	-T UnifiedGenotyper \
+	-R ${REF_FASTA} \
+	-ploidy 20 \
+	-stand_emit_conf 20 \
+	-glm BOTH \
+	-I ${BAM_REALIGN} \
+	-o ${UG_P20_VCF}
+    # filter to just partialy penatrant variants
+    run_step $SAMPLE_NAME $UG_P20AF_VCF grep_AF_not_1 $UG_P20AF_VCF \
+        grep -v "AF=1.00" $UG_P20_VCF 
+	    
+
+    # GATK ReferenceMaker (fasta)
+    CON_NAME=${SAMPLE_NAME}.consensus
+    CON_FA=${OUT_DIR}/${CON_NAME}.fa
+    run_step $SAMPLE_NAME $CON_FA GATK_ReferenceMaker - \
+	java $JAVA_DRMAA \
+	-jar ${GATK_JAR} \
+	-T FastaAlternateReferenceMaker \
+	-R ${REF_FASTA} \
+	--variant ${UG_P1_VCF} \
+	-o ${CON_FA}
+    # BWA index CONSENSUS
+    CON_SIZE=`wc -c ${CON_FA} | cut -d " " -f 1`
+    export CON_BWA_INDEX_TYPE='is'
+    CON_BWA_MAX_IS=$(( 2**30 ))
+    if [ $CON_SIZE -gt $CON_BWA_MAX_IS ]; then
+	export CON_BWA_INDEX_TYPE='bwtsw'
+    fi
+    CONSENSUS_BWA_IDX=${OUT_DIR}/${CON_NAME}.fa.bwa${BWA_VER}.bwt
+    run_step $SAMPLE_NAME $CONSENSUS_BWA_IDX.bwt BWA_index_CON_fa - \
+	bwa index -a $CON_BWA_INDEX_TYPE -p $CONSENSUS_BWA_IDX $CON_FA    
+
+    # 
+    # re-align reads to consensus
+    #
+    CON_SAM=${OUT_DIR}/${CON_NAME}.sam.tgz
+    CON_UBAM=${OUT_DIR}/${CON_NAME}.unsorted.bam
+    CON_BAM_BASE=${OUT_DIR}/${CON_NAME}
+    CON_BAM=${CON_BAM_BASE}.bam
+    CON_BAI=${CON_BAM_BASE}.bai
+
+    run_step $SAMPLE_NAME $CON_SAM "BWA_mem_vs_CONSENSUS" $CON_SAM \
+	$BWA mem -t $NSLOTS \
+	-M -C \
+	-R "'@RG\tID:${SAMPLE_NAME}\tSM:${SAMPLE_NAME}'" \
+	$CONSENSUS_BWA_IDX \
+	$FWD_FASTQ $REV_FASTQ \
+	\| gzip 
+
+
+    # .SAM.gz to sorted .BAM
+    run_step $SAMPLE_NAME $CON_UBAM "samtools_view_CONSENSUS" $CON_UBAM \
+	zcat $CON_SAM \|  \
+	sed "'s/\([1-9]\:N\:[0-9][0-9]*\:[A-Z]*\)/BC\:Z\:\1/'" \| \
+	samtools view -bS -@ $NSLOTS -
+    run_step $SAMPLE_NAME $CON_BAM "samtools_sort_CON" $CON_BAM \
+	  samtools sort -@ $NSLOTS $CON_UBAM $CON_BAM_BASE
+
+
+    # SAMTools index
+    # run_step(SAMPLE_NAME,TARGET,STEP_NAME,STDOUT,cmd...)
+    run_step $SAMPLE_NAME $CON_BAI "samtools_index" - \
+	samtools index ${CON_BAM} ${CON_BAI}
+
+    # SAMTools flagstat
+    # run_step(SAMPLE_NAME,TARGET,STEP_NAME,STDOUT,cmd...)
+    CON_FLAGSTAT_OUT=${OUT_DIR}/${CON_NAME}.flagstat
+    run_step $SAMPLE_NAME $CON_FLAGSTAT_OUT "samtools_flagstat_CON" $CON_FLAGSTAT_OUT \
+	samtools flagstat ${CON_BAM}
+
+
 
     #
     # cleanup - if requested
     #
     if [ -n "$CLEAN" ]; then 
 	run_cmd - \
-	    rm -rf $SAM $UBAM $BCF_RAW 
+	    rm -rf $SAM $UBAM $BAM $BAI \
+	    $CON_SAM $CON_UBAM \
+	    $BAM_DEDUP  $BAI_DEDUP \
+
     fi
 
     exit 0

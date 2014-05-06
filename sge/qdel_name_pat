@@ -11,5 +11,7 @@ qstat | grep -e "$1" | perl -pe 's/ +/\t/g;' | cut -f 1,3,5
 # kill them
 if [ -n "$KILL" ]; then
     qstat | grep -e "$1" | cut -d " " -f 1 | xargs qdel 
+else 
+    echo "LISTING ONLY: re-run with -k or -d to actually kill the jobs"
 fi
 

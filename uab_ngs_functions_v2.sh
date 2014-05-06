@@ -34,7 +34,7 @@ parse_params () {
     for myvar in $CMD_LINE_PARAM_LIST ; do
 	eval $myvar=$1
 	export $myvar
-	echo -n "Z: $myvar	:"; eval echo \$$myvar
+	echo -n "PARSE: $myvar	:"; eval echo \$$myvar
 	if [ -z "$1" ] ; then
 	    echo "$myvar	: MISSING"
 	    SCRIPT_NAME=`basename $0`
@@ -51,6 +51,7 @@ parse_params () {
 
 # put positional params in vars specified in CMD_LINE_PARAM_LIST
 cmd_line_params () {
+    echo "cmd_line_params()"
     for myvar in $CMD_LINE_PARAM_LIST ; do
 	eval $myvar=$1
 	export $myvar
@@ -120,6 +121,7 @@ run_step () { # ARGS: sample_name target_file step_name cmd_out cmd [cmd_args]
     # log start/skip
     if [[ ( -e "${RS_TARGET}" || -n "$DONE_ONLY" ) && ( -e "${RS_TARGET_DONE}" ) ]]; then
 	echo;echo `date`"	TS	SKIP ${RS_NAME}	${RS_SAMPLE_NAME}"; 
+	ls -ltrs "${RS_TARGET}" "${RS_TARGET_DONE}"
     else
 	echo;echo `date`"	TS	START ${RS_NAME}	${RS_SAMPLE_NAME}"; 
 	
