@@ -26,6 +26,7 @@ module load ngs-ccts/annovar/2013.09.11
 module list
 
 if [ -n "$1" ]; then IN=$1; fi
+if [ -n "$2" ]; then OUT=`dirname $2`/`basename $2 .hg19_multianno.txt`; fi
 if [ -z "$IN" ]; then IN=wustl_pad200_b37.hg19.ESRD_SLE_1.avinput; fi
 if [ -z "$OUT" ]; then OUT=`dirname $IN`/`basename $IN .avinput`; fi
 
@@ -36,7 +37,7 @@ echo "OUT=$OUT"
 OPERATOR+=g; PROTOCOL+=refGene; OP_ARGS+=
 
 # CADD
-# not decompressed successfully OPERATOR+=,f; PROTOCOL+=,cadd; OP_ARGS+=, # FULL CADD database
+OPERATOR+=,f; PROTOCOL+=,cadd; OP_ARGS+=,-otherinfo # FULL CADD database
 #OPERATOR+=,f; PROTOCOL+=,caddgt20; OP_ARGS+=-otherinfo, # Highest 20% of CADD scores database
 OPERATOR+=,f; PROTOCOL+=,caddgt10; OP_ARGS+=,-otherinfo # Highest 10% of CADD scores database
 
@@ -60,6 +61,7 @@ OPERATOR+=,f; PROTOCOL+=,popfreq_max; OP_ARGS+=, # Max pop freq across
 #OPERATOR+=,f; PROTOCOL+=,popfreq_all; OP_ARGS+=, # DOWNLOAD MISSING - CSV allele/population freq values: PopFreqMax 1000G2012APR_ALL 1000G2012APR_AFR 1000G2012APR_AMR 1000G2012APR_ASN 1000G2012APR_EUR ESP6500si_AA ESP6500si_EA CG46 NCI60 SNP137 COSMIC65 DISEASE
 OPERATOR+=,f; PROTOCOL+=,esp6500si_all; OP_ARGS+=, # NHLBI exome over 6000 healthy + disease http://www.openbioinformatics.org/annovar/annovar_filter.html#esp
 OPERATOR+=,f; PROTOCOL+=,esp6500si_ea; OP_ARGS+=, # European Ancestry
+OPERATOR+=,f; PROTOCOL+=,esp6500si_aa; OP_ARGS+=, # African Ancestry
 OPERATOR+=,f; PROTOCOL+=,cg46; OP_ARGS+=, # Complete Genomics 46 unrelated healthy people (WGS)
 
 # DB SNP

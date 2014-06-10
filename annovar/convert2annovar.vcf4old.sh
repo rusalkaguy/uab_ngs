@@ -46,12 +46,20 @@ CMD="convert2annovar.pl -format vcf4old $VCF -outfile $DEST $FILTER -include -co
 echo $CMD
 $CMD; RC=$?
 echo -n "DONE RC=$RC "; date
+if [ $RC != 0 ]; then exit $RC; fi
 
-DEST=vcf4old.allallele.inc.com/`basename $VCF .vcf`.avinput
-mkdir -p `dirname $DEST`
-echo -n "START "; date;
-echo -n "HOST  $HOSTNAME aka "; hostname
-CMD="convert2annovar.pl -format vcf4old $VCF -outfile $DEST $FILTER -include -comment -allallele"
-echo $CMD
-$CMD; RC=$?
-echo -n "DONE RC=$RC "; date
+if [ 1 == 1 ]; then
+    echo "SKIP -allallele conversion"
+else
+    DEST=vcf4old.allallele.inc.com/`basename $VCF .vcf`.avinput
+    mkdir -p `dirname $DEST`
+    echo -n "START "; date;
+    echo -n "HOST  $HOSTNAME aka "; hostname
+    CMD="convert2annovar.pl -format vcf4old $VCF -outfile $DEST $FILTER -include -comment -allallele"
+    echo $CMD
+    $CMD; RC=$?
+    echo -n "DONE RC=$RC "; date
+    if [ $RC != 0 ]; then exit $RC; fi
+fi
+
+exit 0

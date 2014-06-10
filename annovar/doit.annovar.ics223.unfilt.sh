@@ -52,21 +52,22 @@ fi
 echo "# OUTPUT=$OUTPUT"
 echo ""
 
-
-echo "#"
-echo "# ANNOVAR: filter out uninteresting variants"
-echo "#"
-INPUT=$AVINPUT
-OUTPUT=$FILTERED_AVINPUT
-SCRIPT=~/uab_ngs/annovar/doit.variants_reduction.sh
-if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; thenecho "SKIP"; else
-    date
-    $SCRIPT $AVINPUT
-    RC=$?; date
-    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
-fi
-echo "# OUTPUT=$OUTPUT"
-echo ""
+# turn off filtering
+FILTERED_AVINPUT=$AVINPUT
+#echo "#"
+#echo "# ANNOVAR: filter out uninteresting variants"
+#echo "#"
+#INPUT=$AVINPUT
+#OUTPUT=$FILTERED_AVINPUT
+#SCRIPT=~/uab_ngs/annovar/doit.variants_reduction.sh
+#if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; thenecho "SKIP"; else
+#    date
+#    $SCRIPT $AVINPUT
+#    RC=$?; date
+#    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
+#fi
+#echo "# OUTPUT=$OUTPUT"
+#echo ""
 
 echo "#"
 echo "# ANNOVAR: annotate remaining variants"
