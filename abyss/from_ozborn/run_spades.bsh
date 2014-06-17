@@ -1,0 +1,22 @@
+#!/bin/bash
+date
+cd ~/consults/xiao/spades
+## WARNINGS
+## THREADS  - !!! not flags for cores !!! - -t for threads!
+## MEMORY -m in GB
+## --tmp-dir
+## -k (all values must be odd, less than 128 and listed in ascending order)
+
+
+# PE-only std assembly
+/share/apps/ngs-ccts/SPAdes-2.5.1-Linux/bin/spades.py -k 41,43,45,47,49 --careful --pe1-1 ../Marginini/MARL_1.fastq --pe1-2 ../Marginini/MARL_2.fastq -o spades_output_short_only
+
+# BayesHammer only
+# produces  R1, R2 and junk 
+# input: --untrusted-contigs=previous assembly(?)
+share/apps/ngs-ccts/SPAdes-3.0.0-Linux/bin/spades.py -k 127 --careful --only-error-correction --pe1-1 ../Marginini/MARL_1.fastq --pe1-2 ../Marginini/MARL_2.fastq --sanger seq_reads_jan9.fa --untrusted-contigs ARGk249-contigs.fa -o spades_original_error_fix
+
+# actual assembly with PE and sanger (can just drop sanger flag)
+/share/apps/ngs-ccts/SPAdes-3.0.0-Linux/bin/spades.py -k 127 --careful --pe1-1 ../Marginini2/51226_S1_L001_R1_001.fastq.gz --pe1-2 ../Marginini2/51226_S1_L001_R2_001.fastq.gz --sanger seq_reads_jan9.fa --untrusted-contigs ARGk249-contigs.fa -o spades_output_hybrid
+
+date

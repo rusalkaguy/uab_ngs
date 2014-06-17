@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+# qsub_fastx_split_R1_barcode_suffix
+# 
+# 
+# split fastq based on barcode values at end of reads
+# 
+#$ -S /bin/bash
+#$ -cwd
+#$ -V   # need this for parameter passing from MASTER to SLAVE!
+#$ -j y
+# email at:  Begining, End, Abort, Suspend
+#$ -m beas  
+# stats to fit in verari nodes
+#$ -l h_rt=48:00:00
+#$ -l vf=900M
+
+#
+# MASTER: submit-self on a head-node
+#
+if [ -z "$JOB_ID" ]; then
+    echo "master?"
+    # check for debug or no qsub
+    if [ "-debug" == "$1" ]; then
+	export JOB_ID=run_now
+	shift 1
+    fi
+    echo "qsub check - make it work on bmilinux"
+    #has_qsub=1; qsub -help >/dev/null 2>&1 || has_qsub=0
+    #if [ $has_qsub==0 ]; then export JOB_ID=no_qsub; fi
+    # check params
+    echo "param check"
+    if [ -z "$1" -o -z "$2" -o -z "$3" -o -z "$4"  ] ; then
+	echo ""
+	echo "ERROR: "`basename $0`" [-debug] READS.fastq barcodes.txt output_basename output_suffix [JOB_NAME]"
+ 	echo ""
+	echo "READS.fastq: reads, usually R1.fastq or some such"
+	echo "barcode.txt: sample_ID to barcode map, tab separated "
+	echo "      see fastx_barcode_splitter.pl -help"
+	echo "output_basename: path for output files. Sample_name and output_suffix will be appended"
+	echo " "
+	echo ""
+	exit 1
+    fi
+    echo "no help"
+    # cmd-line params
+    export FASTQ_IN=$1
+    export BARCODE_TXT=$2
+    export BASE_NAME=$3
+    export SUFFIX=$4
+    export JOB_NAME=$5
+    for myvar in FASTQ_IN BARCODE_TXT BASE_NAME SUFFIX JOB_NAME; do
+	echo -n "$myvar	:"; eval echo \$$myvar
+    done
+    echo "params..."
+    #if [ $has_qsub == 0 ]; then echo "WARNING: QSUB not available... running directly"; fi
+
+    if [ -z "$JOB_ID" ]; then
+	echo -n "QSUB: "
+	qsub -terse \
+	    -N fastx_split-${JOB_NAME} \
+	    -M $USER@uab.edu \
+	    $0
+	if [ $? != 0 ]; then echo "ERROR: bad return code from QSUB"; exit 1; fi
+	exit 0
+    else
+	if [ $has_qsub==1 ]; then echo "skipped qsub (debug mode)"; fi
+    fi
+fi
+
+# 
+# SLAVE: do the actual work on a compute node
+#
+if [ -n "$JOB_ID"  ]; then
+    echo "-- environment --"
+    echo "JOB_NAME: $JOB_NAME"
+    echo "JOB_ID: $JOB_ID"
+    echo "NSLOTS=$NSLOTS"
+    echo "SAMPLE_NAME=$SAMPLE_NAME"
+    echo "-- cmd line params -- "
+    for myvar in FASTQ_IN BARCODE_TXT BASE_NAME SUFFIX JOB_NAME; do
+	echo -n "$myvar	:"; eval echo \$$myvar
+    done
+    
+    echo "I'm a qsub slave: "
+
+    # create output directory, if needed
+    BASE_DIR=`dirname $BASE_NAME`
+    if [ ! -d  $BASE_DIR ]; then
+	mkdir -p $BASE_DIR
+    fi
+
+    # create temp file for stripped R2
+    SPLIT_OUT=${BASE_NAME}fastx_splitter_$SUFFIX.txt
+    
+
+    # process FORWARD reads
+    echo "splitting ${FASTQ_IN}"
+    CMD="fastx_barcode_splitter.pl --eol --mismatches 2 --bcfile ${BARCODE_TXT} \
+	--prefix ${BASE_NAME}  --suffix ${SUFFIX}"
+    echo "CMD: $CMD"
+    if [[ ${FASTQ_IN} = *.gz ]]; then 
+	zcat ${FASTQ_IN} | $CMD | cat > ${SPLIT_OUT}
+    else
+	cat ${FASTQ_IN} | $CMD | cat > ${SPLIT_OUT}
+    fi
+
+    exit 0
+fi

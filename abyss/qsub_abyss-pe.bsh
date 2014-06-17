@@ -1,0 +1,149 @@
+#!/bin/bash
+#######################################################################
+#
+# Denovo PE/SE read assembly into contigs with ABYSS-PE
+#
+# Docs: http://www.bcgsc.ca/downloads/abyss/doc/#assemblingapaired-endlibrary
+# Inputs: FASTA, FASTQ, qseq, export, SRA, SAM or BAM format
+#         optionally compressed with gz, bz2 or xz and may be tarred 
+#         inputs may also be URLs!
+#
+########################################################################
+# libraries to load
+. /etc/profile.d/modules.sh          # enable module loading
+. ~/uab_ngs/uab_ngs_functions_v2.sh  # load shared run_cmd() & run_step()
+#*** QSUB FLAGS ***
+#$ -S /bin/bash
+#$ -cwd # remember what dir I'm launched in 
+#$ -V   # need this for parameter passing from MASTER to SLAVE!
+#$ -m beas  #email at:  Begining, End, Abort, Suspend
+# *** output logs ***
+#$ -j y # merge stderr into stdout
+#$ -o jobs/$JOB_NAME.$JOB_ID.out
+#*** END QSUB ****
+if [ -z "$NSLOTS" ]; then export NSLOTS=16; fi
+if [ -z "$RAM" ]; then export RAM=2; fi
+# run time
+QSUB_TIME_DRMAA="-l h_rt=119:00:00 -l s_rt=120:55:00 " # 5 days
+QSUB_TIME_DRMAA="-l h_rt=48:00:00 -l s_rt=47:55:00 " # 
+QSUB_MACH_DRMAA="-pe smp $NSLOTS -l vf="$(($RAM-1))".9G -l h_vmem=${RAM}g" 
+
+QSUB_TASK_NAME=abyssPE
+# things we'll parse for
+CMD_LINE_PARAM_LIST="WORK_DIR RUN_NAME SAMPLE_NAME K_RANGE FWD_READS REV_READS SE_READS"
+# things we'll report on 
+DERIVED_VAR_LIST="CMD_LINE HOSTNAME PROJECT_DIR" 
+
+# hard coded params
+ABYSS_PATH=/share/apps/ngs-ccts/abyss/abyss-1.3.7_patched/bin
+PATH=${ABYSS_PATH}:$PATH
+export MIN_BASE_QUAL=5
+export MIN_PAIR_BUILD_CONTIG=34
+export MIN_UNITIG_OVERLAP=30
+
+#
+# MASTER: submit-self on a head-node
+#
+if [ -z "$JOB_ID" ]; then
+
+    # parse cmd-line
+    parse_params $* # parses fine, but doesn't succesffully export values
+
+    # cmd-line params
+    export K_RANGE=`echo $K_RANGE | sed "s/,/ /g;"`
+    echo "NOTE: K_RANGE  (can be space-separated or csv list)"
+    print_cmd_line_params
+
+    if [ "$has_qsub" == 0 ]; then echo "WARNING: QSUB not available... running directly"; fi
+
+    for kval in $K_RANGE; do
+	export K_VAL=$kval; 
+	export JOB_NAME=abyssPE_${SAMPLE_NAME}_${K_VAL}
+	export OUT_DIR=$WORK_DIR/$RUN_NAME/$SAMPLE_NAME/$K_VAL
+	mkdir -p $OUT_DIR/jobs
+
+	if [ -z "$JOB_ID" ]; then
+	    pushd $OUT_DIR > /dev/null
+	    echo -n "QSUB: "
+	    qsub -terse \
+		$QSUB_TIME_DRMAA \
+		$QSUB_MACH_DRMAA \
+		-v K_RANGE=$K_VAL \
+		-N $JOB_NAME \
+		-M $USER@uab.edu \
+		$0
+	    popd > /dev/null
+	    if [ $? != 0 ]; then echo "ERROR: bad return code from QSUB"; qsub_exit 1; fi
+	else
+	    if [ $has_qsub==1 ]; then echo "skipped qsub (debug mode)"; fi
+	    echo "-------------------------------------------"
+	    echo "-- K_VAL=$K_VAL (out of $K_RANGE)"
+	    echo "-------------------------------------------"
+	    $0 # in slave mode - no params, just env vars
+	    if [ $? != 0 ]; then echo "ERROR: bad return code from $0"; qsub_exit 1; fi
+	fi
+    done
+    exit 0
+fi
+
+# 
+# SLAVE: do the actual work on a compute node
+#
+if [ -n "$JOB_ID"  ]; then
+    echo "-- environment --"
+    echo "JOB_NAME: $JOB_NAME"
+    echo "JOB_ID: $JOB_ID"
+    echo "NSLOTS=$NSLOTS"
+    echo "SAMPLE_NAME=$SAMPLE_NAME"
+    echo "-- cmd line params -- "
+    echo "K_VAL: $K_VAL"
+    print_cmd_line_params
+    echo "-- hard-coded params -- "
+    echo "NSLOTS=$NSLOTS"
+    echo "MIN_BASE_QUAL: $MIN_BASE_QUAL"
+    echo "MIN_PAIR_BUILD_CONTIG: $MIN_PAIR_BUILD_CONTIG"
+    echo "MIN_UNITIG_OVERLAP: $MIN_UNITIG_OVERLAP"
+    
+    # check for Paired-End read files 
+    if [ "$FWD_READS" != "none" ]; then 
+	LIB_PE_A="lib='PE_READS' 'PE_READS=$FWD_READS $REV_READS'"
+    fi
+    # check for Single-End  read files 
+    if [ "$SE_READS" != "none" ]; then 
+	LIB_SE="'se=$SE_READS'"
+    fi
+
+    
+    OUTFILE=${SAMPLE_NAME}_abyss_k${K_VAL}_n${MIN_PAIR_BUILD_CONTIG}_m${MIN_UNITIG_OVERLAP}_q${MIN_BASE_QUAL}
+
+    cat >  $OUT_DIR/${OUTFILE}.sh <<EOT
+# actual command executed
+
+# prevent Abyss-pe from activating MPI
+export THREADS=$NSLOTS
+NSLOTS=
+
+# put desired version of abyss in path
+export PATH=${ABYSS_PATH}:${PATH}
+
+# run the command
+abyss-pe \
+        --directory=${OUT_DIR} \
+	j=${NSLOTS} \
+	q=${MIN_BASE_QUAL} \
+	k=${K_VAL} \
+	n=${MIN_PAIR_BUILD_CONTIG} \
+	m=${MIN_UNITIG_OVERLAP} \
+	${LIB_PE_A} \
+	${LIB_SE} \
+	name=${OUTFILE}
+
+# return any error code
+exit $? 2>&1 >/dev/null
+EOT
+    echo "I'm a qsub slave: $WORK_DIR/${OUTFILE}.sh"
+    chmod +x  $OUT_DIR/${OUTFILE}.sh
+    #echo "ECHO-RUN" 
+    $OUT_DIR/${OUTFILE}.sh 
+    qsub_exit $?
+fi

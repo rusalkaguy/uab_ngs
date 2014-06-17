@@ -1,0 +1,3 @@
+#!/bin/bash
+cd /home/ozborn/consults/xiao/kmergenie
+/share/apps/ngs-ccts/kmergenie-1.5924/kmergenie -l129 -k249 -s10 test_read_file.txt

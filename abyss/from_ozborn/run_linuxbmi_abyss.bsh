@@ -1,0 +1,48 @@
+#!/bin/bash
+#$ -l h_rt=13:00:00,s_rt=22:00:00
+#$ -l vf=4G
+
+
+#SEQ='MAC'
+#FASTQ1=/home/UAB/ozborn/consults/xiao/xiaoli_8strainsMiSeqData/mpnmac_S5_L001_R1_001.fastq.gz
+#FASTQ2=/home/UAB/ozborn/consults/xiao/xiaoli_8strainsMiSeqData/mpnmac_S5_L001_R2_001.fastq.gz
+#FASTQ1=/home/UAB/ozborn/consults/kevind/fastq/MAC_s_3_1.fastq
+#FASTQ2=/home/UAB/ozborn/consults/kevind/fastq/MAC_s_3_2.fastq
+
+SEQ='ARG'
+#FASTQ1=/home/UAB/ozborn/consults/xiao/fastq/51226_S1_L001_R1_001.fastq.gz
+#FASTQ2=/home/UAB/ozborn/consults/xiao/fastq/51226_S1_L001_R2_001.fastq.gz
+FASTQ1=/home/UAB/ozborn/consults/xiao/fastq/51226_S1_L001_R1_001.fastq.00.0_0.cor.fastq.gz
+FASTQ2=/home/UAB/ozborn/consults/xiao/fastq/51226_S1_L001_R2_001.fastq.00.0_0.cor.fastq.gz
+FASTQ3=/home/UAB/ozborn/consults/xiao/fastq/MARL_1.fastq
+FASTQ4=/home/UAB/ozborn/consults/xiao/fastq/MARL_2.fastq
+
+#SANGERFASTA=/home/UAB/ozborn/consults/xiao/sanger_fasta/seq_reads_jan9.fa
+SANGERFASTA=/home/UAB/ozborn/consults/xiao/sanger_fasta/seq_reads_merge_jan9.fa
+
+
+#PAIR_NEED_CONTIGS=34 #Mycoplasma optimized
+PAIR_NEED_CONTIGS=10 #Default
+MIN_UNITIG_OVERLAP=30 #Default
+MIN_BASE_QUAL=3 #Default
+NUM_PROCESSES=6
+WORKDIR=/home/UAB/ozborn/consults/xiao/abyss137
+
+date
+cd $WORKDIR
+mkdir -p ${SEQ}
+cd ${SEQ}
+export k
+#for k in {44..49..5}; do
+for k in {244..249..5}; do
+#for k in {246..248..2}; do
+	mkdir -p $k
+	SPARAM=$(echo "scale=5;$k*2" | bc)
+	abyss-pe -C $k j=${NUM_PROCESSES} q=${MIN_BASE_QUAL} k=${k} n=${PAIR_NEED_CONTIGS} m=${MIN_UNITIG_OVERLAP} s=${SPARAM} name=${SEQ}k${k} lib='A' A="$FASTQ1 $FASTQ2" long=long1 long1="$SANGERFASTA" pe="A hiseq" hiseq="$FASTQ3 $FASTQ4" hiseq_l=50 &> output${k}.txt &
+	#abyss-pe -C $k j=${NUM_PROCESSES} q=${MIN_BASE_QUAL} k=${k} n=${PAIR_NEED_CONTIGS} m=${MIN_UNITIG_OVERLAP} s=${SPARAM} name=${SEQ}k${k} lib='A' A="$FASTQ1 $FASTQ2" se="$SANGERFASTA" pe="A hiseq" hiseq="$FASTQ3 $FASTQ4" hiseq_l=50 &> output${k}.txt & # No impact
+	#abyss-pe -C $k j=${NUM_PROCESSES} q=${MIN_BASE_QUAL} k=${k} n=${PAIR_NEED_CONTIGS} m=${MIN_UNITIG_OVERLAP} s=${SPARAM} name=${SEQ}k${k} lib='A' A="$FASTQ1 $FASTQ2" long="$SANGERFASTA" pe="A hiseq" hiseq="$FASTQ3 $FASTQ4" hiseq_l=50 &> output${k}.txt & #Failed due to bwa mem not having fastq files
+	#abyss-pe -C $k j=${NUM_PROCESSES} q=${MIN_BASE_QUAL} k=${k} n=${PAIR_NEED_CONTIGS} m=${MIN_UNITIG_OVERLAP} s=${SPARAM} name=${SEQ}k${k} lib='A' A="$FASTQ1 $FASTQ2" pe="A hiseq" hiseq="$FASTQ3 $FASTQ4" hiseq_l=50 &> output${k}.txt &
+	# FAILS
+	#abyss-pe -C $k j=${NUM_PROCESSES} q=${MIN_BASE_QUAL} k=${k} n=${PAIR_NEED_CONTIGS} m=${MIN_UNITIG_OVERLAP} s=${SPARAM} name=${SEQ}k${k} lib='A' A="$FASTQ1 $FASTQ2" pe="$FASTQ3 $FASTq4" &> output${k}.txt &
+done
+cd ../

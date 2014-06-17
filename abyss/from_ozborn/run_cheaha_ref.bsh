@@ -1,0 +1,30 @@
+#!/bin/bash
+#$ -l h_rt=13:00:00,s_rt=22:00:00
+#$ -l vf=4G
+PAIR_NEED=34
+MIN_BASE_QUAL=3
+#~/bin/bin/abyss-pe j=16 k=${KMER} n=34 m=30 lib='A' A="/home/UAB/ozborn/consults/kevind/fastq/${SEQ}_s_3_1.fastq /home/UAB/ozborn/consults/kevind/fastq/${SEQ}_s_3_2.fastq" name=${SEQ}_abyss134_k${KMER}_n34m30 > ${SEQ}_abyss134_k${KMER}_n34m30.verbose_output
+date
+
+
+
+SEQ=M129
+cd ~/consults/kevind/abyss
+mkdir -p ${SEQ}
+cd ~/consults/kevind/abyss/${SEQ}
+KMER=49
+mkdir -p $KMER
+cd $KMER
+/share/apps/ngs-ccts/abyss-1.3.4/bin/abyss-pe j=16 q=${MIN_BASE_QUAL} k=${KMER} n=${PAIR_NEED} m=30 lib='peM129' peM129="/home/ozborn/consults/kevind/fastq/${SEQ}_s_2_1.fastq /home/UAB/consults/kevind/fastq/${SEQ}_s_2_2.fastq" name=${SEQ}_abyss134_k${KMER}_n${PAIR_NEED}m30_q${MIN_BASE_QUAL} > ${SEQ}_abyss134_k${KMER}_n${PAIR_NEED}m30_q${MIN_BASE_QUAL}.verbose_output
+cd ../..
+exit
+
+SEQ=FH
+cd ~/consults/kevind/abyss
+mkdir -p ${SEQ}
+cd ~/consults/kevind/abyss/${SEQ}
+KMER=49
+mkdir -p $KMER
+cd $KMER
+~/bin/bin/abyss-pe j=16 q=${MIN_BASE_QUAL} k=${KMER} n=${PAIR_NEED} m=30 lib='A' A="/home/UAB/ozborn/consults/kevind/fastq/${SEQ}_s_2_1.fastq /home/UAB/ozborn/consults/kevind/fastq/${SEQ}_s_2_2.fastq" name=${SEQ}_abyss134_k${KMER}_n${PAIR_NEED}m30_q${MIN_BASE_QUAL} > ${SEQ}_abyss134_k${KMER}_n${PAIR_NEED}m30_q${MIN_BASE_QUAL}.verbose_output
+cd ../..
