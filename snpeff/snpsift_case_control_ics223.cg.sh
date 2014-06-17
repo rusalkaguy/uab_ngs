@@ -1,15 +1,18 @@
 #!/bin/bash
 echo -n "START "; date
 # ******** inputs ***********
-VCF_IN=$PWD/hc_pad200_hg19.vcf
-NAME=HC200 
-ANNOVAR_IN=vcf4old.inc.com/hc_pad200_hg19.reduce.step4.varlist
-if [ -n "$1" ]; then VCF_IN="$1"; fi
-if [ -n "$2" ]; then NAME="$2"; fi
-if [ -n "$3" ]; then ANNOVAR_IN="$3"; fi
+VCF_IN="$1"      ; if[ -z "$VCF_IN" ]; then VCF_IN=$PWD/hc_pad200_hg19.vcf; fi
+NAME="$2"        ; if[ -z "$NAME"   ]; then NAME=HC200; fi
+ANNOVAR_IN="$3"  ; if[ -z "$ANNOVAR_IN" ]; then ANNOVAR_IN=vcf4old.inc.com/hc_pad200_hg19.reduce.step4.varlist; fi
+SAMPLE_DEF="$4"
+if [[ -z "$4" ]]; then
+    echo "ERROR: syntax $0 VCF_IN ABBREV ANNOVAR_IN SAMPLE_DEF"
+    exit 1;
+fi
 echo "VCF_IN=$VCF_IN"; if [ ! -e $VCF_IN ]; then echo "!!MISSING!!"; exit 1; fi
 echo "NAME=$NAME"
 echo "ANNOVAR_IN=$ANNOVAR_IN"; if [ ! -e $ANNOVAR_IN ]; then echo "!!MISSING!!"; exit 1; fi
+echo "SAMPLE_DEF=$SAMPLE_DEF"; if [ ! -e $SAMPLE_DEF ]; then echo "!!MISSING!!"; exit 1; fi
 
 # ********* derived names ***************
 IN_BASE=`basename $VCF_IN .avinput`
@@ -42,7 +45,7 @@ echo `grep -vc "^#" $ANNOVAR_VCF`" variants in $ANNOVAR_VCF"
 echo "***************************************************************"
 echo "generate .tfam files from VCF $IN"
 if [ ! -e $IN_BASE.sleVnorm.tfam ]; then 
-    ~/uab_ngs/snpeff/vcf2tped_ics223.sh $VCF_IN
+    ~/uab_ngs/snpeff/vcf2tped_ics223.sh $VCF_IN $SAMPLE_DEF
     RC=$?; if [ $RC != 0 ]; then echo "ERROR: RC=$RC"; exit $RC; fi
 else
     echo SKIP

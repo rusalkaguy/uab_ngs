@@ -68,6 +68,7 @@ OPERATOR+=,f; PROTOCOL+=,cg46; OP_ARGS+=, # Complete Genomics 46 unrelated healt
 OPERATOR+=,f; PROTOCOL+=,snp129; OP_ARGS+=, # last pre 1000g dbSNP
 OPERATOR+=,f; PROTOCOL+=,snp137; OP_ARGS+=, # latest
 OPERATOR+=,f; PROTOCOL+=,snp137NonFlagged; OP_ARGS+=, # Flagged SNPs include SNPs < 1% minor allele frequency (MAF) (or unknown), mapping only once to reference assembly, flagged in dbSnp as "clinically associated". 
+OPERATOR+=,f; PROTOCOL+=,snp138; OP_ARGS+=, # latest
 
 # IMPACT
 OPERATOR+=,f; PROTOCOL+=,ljb2_all; OP_ARGS+=, # 
