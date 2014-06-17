@@ -5,22 +5,39 @@
 # by 
 # ANNOVAR-2013-09-11/convert2annovar.sh -format vcf4old -include -comment 
 #
+# combined Cohorts:
+# ASW                HEALTHY
+# CEU                HEALTHY
+# YRI                HEALTHY
+# WUSTL.HEALTHY      HEALTHY
+# WUSTL.SLE          SLE
+# WUSTL.ESRD         ESRD+SLE
+# Lupus              ESRD+SLE
+# RA                 RA
 ######################################################################
 
 # ARGS
-IN=$1
-SAMPLE_DEF=$2
+IN=$1  # vcf4old.inc.com/foo.avinput
 OUT_BASE=`basename $1 .avinput`
+PHENO_CODING=$2
 if [ ! -e "$IN" ]; then 
     echo "ERROR: can't read input .vcf file: $IN"; 
     exit 1 2>&1 > /dev/null
 fi
-if [ ! -e "$SAMPLE_DEF" ]; then 
-    echo "ERROR: can't read input sample2cohort file: $SAMPLE_DEF"; 
+if [ ! -e "$PHENO_CODING" ]; then 
+    echo "ERROR: can't read input coding2group2sample file: $PHENO_CODING"; 
     echo "ERROR: first col=sample name"
     echo "ERROR: second col=cohort/phenotype name"
     exit 1 2>&1 > /dev/null
 fi
+echo "PHENO_CODING=$PHENO_CODING"; 
+if [[ -z "$PHENO_CODING" || ! -e "$PHENO_CODING" ]]; then echo "!!MISSING!!"; exit 1; fi
+PHENO_DEF=`grep "^##PHENO_DEF=" $PHENO_CODING | perl -pe 's/.*=([^ \t#]+).*/$1/;'`
+echo "PHENO_DEF=$PHENO_DEF"; if [ ! -e $PHENO_DEF ]; then echo "!!MISSING!!"; exit 1; fi
+if [[ -z "$PHENO_DEF" || ! -e "$PHENO_DEF" ]]; then echo "!!MISSING!!"; exit 1; fi
+SAMPLE_DEF=`grep "^##SAMPLE_DEF=" $PHENO_DEF | perl -pe 's/.*=([^ \t#]+).*/$1/;'`
+echo "SAMPLE_DEF=$SAMPLE_DEF"; 
+if [[ -z "$SAMPLE_DEF" || ! -e "$SAMPLE_DEF" ]]; then echo "!!MISSING!!"; exit 1; fi
 
 # get sample list
 if [ `grep -c "^#CHROM" $IN` != 1 ]; then
@@ -33,7 +50,8 @@ SAMPLE_NUM=`echo $SAMPLE_LIST | wc -w`
 echo "Found $SAMPLE_NUM samples"
 
 # for each phenotype definition
-for phenotype in sleVnorm esrdVnorm esrdVsle esrdVsleNorm ; do
+COMPARE_LIST=`sort $PHENO_CODING | awk '(/^#/){next;}($1!=LVAL){print $1; LVAL=$1}'`
+for phenotype in $COMPARE_LIST; do
 
     echo "PHENOTYPE: $phenotype"
     OUT=$OUT_BASE.$phenotype.tfam
@@ -63,58 +81,25 @@ for phenotype in sleVnorm esrdVnorm esrdVsle esrdVsleNorm ; do
 	PATERNAL_ID=0 # no family info available
 	MATERNAL_ID=0 # no family info available
 	SEX_ID=2 # female
-	
-	# phenotype parsed from sample name
-	PHENOTYPE_STATUS=1 # normal/unaffected
+	PHENOTYPE_STATUS=0 # missing
 
-	# look up sample phenotype
-	SAMPLE_PHENO=`egrep "^$sample\s" $SAMPLE_DEF|cut -f 2`
-
-	if [[ "$SAMPLE_PHENO"=="NONE" || -z "$SAMPLE_PHENO" ]]; then
-	    # HapMap samples are outside our dataset
-	    PHENOTYPE_STATUS=$STATUS_MISSING
-	    if [ -z "$SAMPLE_PHENO" ]; then
-		echo "ERROR: MISSING $sample NOT FOUND IN $SAMPLE_DEF"
-	    fi
-	else
-	    # which phenotype are we looking at
-	    if [ "$phenotype" == "sleVnorm" ]; then
-		if [[ "$SAMPLE_PHENO" == "SLE" ]]; then
-		    PHENOTYPE_STATUS=$STATUS_AFFECTED
-		fi
-	    fi	    
-	    if [ "$phenotype" == "esrdVnorm" ]; then
-		if [[ "$SAMPLE_PHENO" == "ESRD" ]]; then
-		    PHENOTYPE_STATUS=2
-		fi
-	    fi	    
-	    if [ "$phenotype" == "esrdVsle" ]; then
-		# default (for Healthy)
-		PHENOTYPE_STATUS=$STATUS_MISSING
-		if [[ "$SAMPLE_PHENO" == "SLE" ]]; then 
-		    PHENOTYPE_STATUS=$STATUS_UNAFFECTED
-		fi
-		if [[ "$SAMPLE_PHENO" == "ESRD" ]]; then
-		    PHENOTYPE_STATUS=$STATUS_AFFECTED
-		fi
-	    fi	    
-	    if [ "$phenotype" == "esrdVsleNorm" ]; then
-		# default (for Healthy)
-		PHENOTYPE_STATUS=$STATUS_UNAFFECTED
-		if [[ "$SAMPLE_PHENO" == "SLE" ]]; then 
-		    PHENOTYPE_STATUS=$STATUS_UNAFFECTED
-		fi
-		if [[ "$SAMPLE_PHENO" == "ESRD" ]]; then
-		    PHENOTYPE_STATUS=$STATUS_AFFECTED
-		fi
-	    fi	    
+	# look up sample group/cohort
+	SAMPLE_GROUP=`egrep "^$sample\s" $SAMPLE_DEF|cut -f 2`
+	if [ -z "$SAMPLE_GROUP" ]; then echo "ERROR: MISSING $sample NOT FOUND IN $SAMPLE_DEF"; exit 1; fi
+	# look up group/cohort phenotype
+	SAMPLE_PHENO=`egrep "^$SAMPLE_GROUP\s" $PHENO_DEF|cut -f 2`
+	if [ -z "$SAMPLE_PHENO" ]; then echo "ERROR: MISSING $SAMPLE_GROUP NOT FOUND IN $PHENO_DEF"; exit 1; fi
+	# look up phenotype coding for this comparison & this group and phenotype
+	PHENO_CODE=`awk '($1=="'$phenotype'"&&($2=="'$SAMPLE_GROUP'"||$3=="'$SAMPLE_PHENO'")){print $4}' $PHENO_CODING`
+	if [ -n "$PHENO_CODE" ]; then
+	    PHENOTYPE_STATUS=$PHENO_CODE
 	fi
-	 
+
 	# count phenotype status
 	eval 'STATUS_'$PHENOTYPE_STATUS'=$(($STATUS_'$PHENOTYPE_STATUS' + 1))'
 
 	# debug
-	#echo "     $PHENOTYPE_STATUS $sample"
+	echo "     $PHENOTYPE_STATUS $sample"
 
 	# output
 	TAB="	"

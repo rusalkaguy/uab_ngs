@@ -6,10 +6,9 @@
 # 2. SNPSift (case/control count/pvalue)
 #
 #
-VCF_IN=$1
-ABBREV_IN=$2
-SAMPLE_DEF=$3
-if [ -z "$SAMPLE_DEF" ]; then SAMPLE_DEF=cohort_sample_list.txt; fi
+VCF_IN=$1         ;if [ ! -e "$VCF_IN" ]; then "ERROR: MISSING FILE: VCF_IN=$VCF_IN"; fi
+ABBREV_IN=$2      ;if [ -z "$ABBREV_IN" ]; then "ERROR: MISSING ABBREV: ABBREV_IN=$ABBREV_IN"; fi
+PHENO_CODING=$3   ;if [ ! -e "$PHENO_CODING" ]; then "ERROR: MISSING FILE: PHENO_CODING=$PHENO_CODING"; fi
 
 echo `# CMD: basename $0`" $*"
 
@@ -35,8 +34,8 @@ OUT_DATA_AAF01_STATS=`basename $OUT_DATA_AAF01 .txt`.stats
 OUT_DATA_NOVEL=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf00.txt
 OUT_DATA_NOVEL_STATS=`basename $OUT_DATA_NOVEL .txt`.stats
 
-if [[ -z "$VCF_IN" || ! -e "$VCF_IN" || -z $ABBREV_IN ]]; then
-    echo "USAGE: "`basename $0`" input.VCF abbrev"
+if [[ -z "$VCF_IN" || ! -e "$VCF_IN" || -z "$ABBREV_IN" || ! -e "$PHENO_CODING" ]]; then
+    echo "USAGE: "`basename $0`" input.VCF abbrev cohort_pheno_coding.txt"
     exit 1
 fi
 
@@ -104,12 +103,13 @@ echo "#"
 echo "# SnpSift - compute variant counts/cohort & p-values"
 echo "#"
 INPUT=$AVINPUT
+INPUT2=$PHENO_CODING
 OUTPUT=$CASECONTROL_VCF
 OUTPUT2=$CASECONTROL_TXT
-SCRIPT=~/uab_ngs/snpeff/snpsift_case_control_ics223.sh
-if [ -e "$OUTPUT" ]; then echo "SKIP"; else
+SCRIPT=~/uab_ngs/snpeff/snpsift_case_control_ics223.cg.sh
+if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT"&& "$OUTPUT" -nt "$INPUT2" ]]; then echo "SKIP"; else
     date
-    $SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT
+    $SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT $PHENO_CODING
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
 fi

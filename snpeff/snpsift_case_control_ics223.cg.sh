@@ -1,18 +1,20 @@
 #!/bin/bash
 echo -n "START "; date
 # ******** inputs ***********
-VCF_IN="$1"      ; if[ -z "$VCF_IN" ]; then VCF_IN=$PWD/hc_pad200_hg19.vcf; fi
-NAME="$2"        ; if[ -z "$NAME"   ]; then NAME=HC200; fi
-ANNOVAR_IN="$3"  ; if[ -z "$ANNOVAR_IN" ]; then ANNOVAR_IN=vcf4old.inc.com/hc_pad200_hg19.reduce.step4.varlist; fi
-SAMPLE_DEF="$4"
+VCF_IN="$1"        # $PWD/hc_pad200_hg19.vcf
+NAME="$2"          # HC200
+ANNOVAR_IN="$3"    # vcf4old.inc.com/hc_pad200_hg19.reduce.step4.varlist
+PHENO_CODING="$4"  # cohort_pheno_compare_coding.wustl.cg.txt
+# NOTE: SAMPLE_DEF, PHENO_DEF and PHENO_CODING should all be linked, rather than specified explicitly. 
+# likley PHENO_CODING shoudl point to PHENO_DEF, which should point to SAMPLE_DEF
 if [[ -z "$4" ]]; then
-    echo "ERROR: syntax $0 VCF_IN ABBREV ANNOVAR_IN SAMPLE_DEF"
+    echo "ERROR: syntax $0 VCF_IN ABBREV ANNOVAR_IN PHENO_DEF"
     exit 1;
 fi
 echo "VCF_IN=$VCF_IN"; if [ ! -e $VCF_IN ]; then echo "!!MISSING!!"; exit 1; fi
 echo "NAME=$NAME"
 echo "ANNOVAR_IN=$ANNOVAR_IN"; if [ ! -e $ANNOVAR_IN ]; then echo "!!MISSING!!"; exit 1; fi
-echo "SAMPLE_DEF=$SAMPLE_DEF"; if [ ! -e $SAMPLE_DEF ]; then echo "!!MISSING!!"; exit 1; fi
+echo "PHENO_CODING=$PHENO_CODING"; if [ ! -e $PHENO_CODING ]; then echo "!!MISSING!!"; exit 1; fi
 
 # ********* derived names ***************
 IN_BASE=`basename $VCF_IN .avinput`
@@ -45,7 +47,7 @@ echo `grep -vc "^#" $ANNOVAR_VCF`" variants in $ANNOVAR_VCF"
 echo "***************************************************************"
 echo "generate .tfam files from VCF $IN"
 if [ ! -e $IN_BASE.sleVnorm.tfam ]; then 
-    ~/uab_ngs/snpeff/vcf2tped_ics223.sh $VCF_IN $SAMPLE_DEF
+    ~/uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING
     RC=$?; if [ $RC != 0 ]; then echo "ERROR: RC=$RC"; exit $RC; fi
 else
     echo SKIP
@@ -55,16 +57,18 @@ echo "***************************************************************"
 echo "Generate phenotype counts in VCF"
 PHE_IN=$ANNOVAR_VCF
 # for each phenotype definition
-for phenotype in sleVnorm esrdVnorm esrdVsle esrdVsleNorm; do
+COMPARE_LIST=`sort $PHENO_CODING | awk '(/^#/){next;}($1!=LVAL){print $1; LVAL=$1}'`
+for phenotype in $COMPARE_LIST; do
 
     echo "PHENOTYPE: $phenotype"
     PHE_OUT=$IN_BASE.$phenotype.vcf
 
     #**************************************************
     echo "caseControl first phenotype: $phenotype"
-    if [ ! -e $PHE_OUT ]; then 
+    TFAM=$IN_BASE.${phenotype}.tfam
+    if [[ ! -e "$PHE_OUT" || "$PHE_IN" -nt "$PHE_OUT" || "$0" -nt "$PHE_OUT" || "$TFAM" -nt "$PHE_OUT" ]]; then 
 	CMD="java -jar /share/apps/ngs-ccts/snpEff_3_3/SnpSift.jar caseControl \
-	    -tfam $IN_BASE.${phenotype}.tfam \
+	    -tfam $TFAM \
 	    -name _${NAME}_$phenotype \
 	    $PHE_IN"
 	echo "$CMD > $PHE_OUT"
@@ -101,7 +105,6 @@ if [ ! -e $OUT_TXT ]; then
               | tr ";" "\n" \
               | egrep "^(Cases|Control|CC_)" \
               | cut -d = -f 1 \
-              | sort \
               | uniq`
     echo "    "`echo $COL_LIST | wc -w`" fields ("`echo $COL_LIST | tr "	" "\n"| cut -d _ -f 1 | sort | uniq | perl -pe 's/\n//;'`")"
     echo "    $COL_LIST"

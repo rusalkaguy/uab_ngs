@@ -98,7 +98,8 @@ while(<>) {
 	my $max_maf = "0";
 	# dbSNP
 	my $snp137 = $fields[$CHROM{"snp137"}];
-	$is_novel = 0 if( "NA" ne $snp137 );
+	my $snp138 = $fields[$CHROM{"snp138"}];
+	$is_novel = 0 if( "NA" ne $snp137 || "NA" ne $snp138);
 	# compute max observer allele freq
 	foreach my $pop ( "1000g2012apr_all", "1000g2012apr_eur", "esp6500si_all", "esp6500si_ea", "cg46" ) {
 	    my $maf= $fields[$CHROM{$pop}];
