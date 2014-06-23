@@ -12,6 +12,7 @@ echo "Created MERGED/$ALL_CG.vcfBeta-ALL-ASM.ITGAM.hg19.vcf"
 # output is MERGED/ASW.CEU.Lupus.RA.YRI.vcfBeta-ALL-ASM.ITGAM.hg19.vcf
 
 # cut WSUTL600 down to ITGAM
+# WARNING: should put filtered VCF in a subdiretory like we do for CG
 WUSTL_SRC_VCF=../../bwamem_pad200_hg19/bwamem_pad200_hg19.fsok.vcf
 WUSTL_TARGET_VCF=MERGED/bwamem_pad200_hg19.fsok.itgam.vcf
 awk 'BEGIN{OFS="\t";IFS="\t";}(/^#/){print $0; next;}("chr16"==$1 && $2 >= 31235000 && $2 <= 31366000){print $0;}' \
@@ -22,6 +23,7 @@ echo "Created $WUSTL_TARGET_VCF"
 # merge in WUSTL600
 module load java/jre1.7.0_51
 GATK=/share/apps/ngs-ccts/GenomeAnalysisTK/GenomeAnalysisTK-3.0-0/GenomeAnalysisTK.jar 
+# WARNING: should pull REF from the WUSTL VCF!!!
 REF=/scratch/share/public_datasets/ngs/databases/gatk_bundle/2.5/hg19/ucsc.hg19.fasta
 MERGE_OPT=PRIORITIZE # UNIQUIFY
 
@@ -43,9 +45,6 @@ jobs
 wait
 
 # bgzip 
-module load ngs-ccts/tabix/0.2.6
-echo "bgzip $OUT_VCF"
-bgzip -c $OUT_VCF > $OUT_VCF.gz
-echo "tabix $OUT_VCF.gz"
-tabix -p vcf  $OUT_VCF.gz
+echo "bgzip/tabix -p vcf $OUT_VCF"
+~/uab_ngs/tabix/tabix_bgzip.sh  "$OUT_VCF"
 
