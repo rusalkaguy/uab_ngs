@@ -2,6 +2,11 @@
 #
 # custom multi-column filtering that ANNOVAR does not support
 #
+# OBSOLETE
+# split into 
+#    annovar_multianno_stats_annotate.pl
+#    annovar_multianno_filter_union_impact.pl
+#
 use strict;
 use Data::Dumper;
 
