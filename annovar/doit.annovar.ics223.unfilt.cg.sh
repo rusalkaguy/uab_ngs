@@ -153,12 +153,12 @@ echo ""
 
 echo ""
 echo "#"
-echo "# ANNOVAR: hand-filter annotated variants"
+echo "# ANNOVAR: count variant types/classes, add is_novel, max_aaf columns"
 echo "#"
 INPUT=$OUT_DATA_COLCLEAN
 OUTPUT=$OUT_DATA_HFILT
 OUTPUT2=$OUT_DATA_HFILT_STATS
-SCRIPT=~/uab_ngs/annovar/annovar_multianno_filter.pl
+SCRIPT=~/uab_ngs/annovar/annovar_multianno_stats_annotate.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
     cat $INPUT | $SCRIPT > $OUTPUT 2> $OUTPUT2

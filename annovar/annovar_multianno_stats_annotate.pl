@@ -1,7 +1,10 @@
 #!/usr/bin/perl
 #
-# custom multi-column filtering that ANNOVAR does not support
+# extract names columns from ANNOVAR multi-anno output
+# compute statistics on overlap between variant impact predictors
+# add is_novel and max_aaf columns to right, based on existing column values. 
 #
+# (evolved out of annovar_multianno_filter.pl, with the filtering removed)
 use strict;
 use Data::Dumper;
 
