@@ -25,7 +25,7 @@ echo 'to clean dir: rm *.*.vcf *.tfam */*.vcf '$OUT_TXT $OUT_VCF
 echo "***************************************************************"
 echo "# extract subset VCF from ANNOVAR REDUCEd list"
 ANNOVAR_VCF=${ANNOVAR_IN}.vcf
-if [ ! -e $ANNOVAR_VCF ]; then 
+if [[ ! -e $ANNOVAR_VCF || "$ANNOVAR_IN" -nt "$ANNOVAR_VCF" || "$0" -nt "$ANNOVAR_VCF" ]]; then 
     echo "grep ^# $VCF_IN > $ANNOVAR_VCF"
     grep "^#" $VCF_IN > $ANNOVAR_VCF
     RC=$?; if [ $RC != 0 ]; then echo "ERROR: RC=$RC"; exit $RC; fi
@@ -41,8 +41,11 @@ echo `grep -vc "^#" $ANNOVAR_VCF`" variants in $ANNOVAR_VCF"
 
 echo "***************************************************************"
 echo "generate .tfam files from VCF $IN"
-if [ ! -e $IN_BASE.sleVnorm.tfam ]; then 
-    ~/uab_ngs/snpeff/vcf2tped_ics223.sh $VCF_IN
+INPUT=$VCF_IN
+SCRIPT=~/uab_ngs/snpeff/vcf2tped_ics223.sh
+OUTPUT=$IN_BASE.sleVnorm.tfam
+if [[ ! -e "$OUTPUT" || "$INPUT" -nt "$OUTPUT" || "$SCRIPT" -nt "$OUTPUT" ]]; then 
+    $SCRIPT $INPUT
     RC=$?; if [ $RC != 0 ]; then echo "ERROR: RC=$RC"; exit $RC; fi
 else
     echo SKIP
@@ -59,11 +62,14 @@ for phenotype in sleVnorm esrdVnorm esrdVsle esrdVsleNorm; do
 
     #**************************************************
     echo "caseControl first phenotype: $phenotype"
-    if [ ! -e $PHE_OUT ]; then 
+    INPUT=$PHE_IN
+    INPUT2=$IN_BASE.${phenotype}.tfam
+    OUTPUT=$PHE_OUT
+    if [[ ! -e "$OUTPUT" || "$INPUT" -nt "$OUTPUT" || "$INPUT2" -nt "$OUTPUT" ]]; then 
 	CMD="java -jar /share/apps/ngs-ccts/snpEff_3_3/SnpSift.jar caseControl \
-	    -tfam $IN_BASE.${phenotype}.tfam \
+	    -tfam $INPUT2 \
 	    -name _${NAME}_$phenotype \
-	    $PHE_IN"
+	    $INPUT"
 	echo "$CMD > $PHE_OUT"
 	$CMD > $PHE_OUT
 	RC=$?
@@ -89,7 +95,10 @@ echo "***************************************************************"
 echo "Excel Extract" #**************************************************
 
 echo "Creating $OUT_TXT"
-if [ ! -e $OUT_TXT ]; then 
+INPUT=$OUT_VCF
+SCRIPT=$0
+OUTPUT=$OUT_TXT
+if [[ ! -e "$OUTPUT" || "$INPUT" -nt "$OUTPUT" || "$SCRIPT" -nt "$OUTPUT" ]]; then 
 
     # extract field list
     echo "Extract field list"
@@ -98,7 +107,6 @@ if [ ! -e $OUT_TXT ]; then
               | tr ";" "\n" \
               | egrep "^(Cases|Control|CC_)" \
               | cut -d = -f 1 \
-              | sort \
               | uniq`
     echo "    "`echo $COL_LIST | wc -w`" fields ("`echo $COL_LIST | tr "	" "\n"| cut -d _ -f 1 | sort | uniq | perl -pe 's/\n//;'`")"
     echo "    $COL_LIST"

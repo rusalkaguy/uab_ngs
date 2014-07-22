@@ -5,8 +5,10 @@
 # set up notification for individual jobs - if you want
 # qalter -M $USER@uab.edu -m eas
 #
+SLEEP=60
 FILTER=.
-if [ -n "$1" ]; then FILTER="$1"; shift; fi
+if [ "$1" == "-n" ]; then SLEEP="$2"; echo SLEEP=$SLEEP; shift 2; fi
+if [ -n "$1" ]; then FILTER="$1"; echo FILTER=$FILTER; shift; fi
 EMAILS=$USER@uab.edu
 while [[ "$1" == *@* ]]; do 
 	EMAILS="$EMAILS $1"
@@ -21,7 +23,7 @@ echo -n "$JOB_COUNT '$FILTER' jobs running @ " ; date
 while [ "$JOB_COUNT" -gt 0 ]; do
 	echo -n "$JOB_COUNT '$FILTER' jobs running @ " ; date
 	# wait 30 seconds before checking again
-        sleep 60
+        sleep $SLEEP
 	JOB_COUNT=`qstat -u $USER | grep -e "$FILTER" | wc -l`
 done
 # email final status

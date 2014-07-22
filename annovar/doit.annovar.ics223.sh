@@ -17,6 +17,7 @@ FULL_MULTIANNO_TXT=${DIR_BASENAME}.full.hg19_multianno.txt
 MULTIANNO_TXT=${FILTERED_AVINPUT}.hg19_multianno.txt  
 
 CASECONTROL_VCF=`basename $VCF_IN .vcf`.caseControl.vcf
+CASECONTROL_SORT_VCF=`basename $VCF_IN .vcf`.caseControl.sort.vcf
 CASECONTROL_TXT=`basename $VCF_IN .vcf`.caseControl.txt
 OUT_FIELDS=`basename $VCF_IN .vcf`.caseControl.annovar.fields.txt
 OUT_DATA=`basename $VCF_IN .vcf`.caseControl.annovar.data.txt
@@ -59,7 +60,7 @@ echo "#"
 INPUT=$AVINPUT
 OUTPUT=$FILTERED_AVINPUT
 SCRIPT=~/uab_ngs/annovar/doit.variants_reduction.sh
-if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; thenecho "SKIP"; else
+if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
     $SCRIPT $AVINPUT
     RC=$?; date
@@ -103,7 +104,7 @@ INPUT=$AVINPUT
 OUTPUT=$CASECONTROL_VCF
 OUTPUT2=$CASECONTROL_TXT
 SCRIPT=~/uab_ngs/snpeff/snpsift_case_control_ics223.sh
-if [ -e "$OUTPUT" ]; then echo "SKIP"; else
+if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
     $SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT
     RC=$?; date
@@ -111,6 +112,21 @@ if [ -e "$OUTPUT" ]; then echo "SKIP"; else
 fi
 echo "# OUTPUT=$OUTPUT"
 echo "# OUTPUT2=$OUTPUT2"
+echo ""
+
+echo "#"
+echo "# Sort extracted VCF "
+echo "#"
+INPUT=$CASECONTROL_VCF
+OUTPUT=$CASECONTROL_SORT_VCF
+SCRIPT=~/uab_ngs/linux_plus/sort_chr_pos.sh
+if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
+    date
+    $SCRIPT $INPUT > $OUTPUT
+    RC=$?; date
+    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
+fi
+echo "# OUTPUT=$OUTPUT"
 echo ""
 
 echo "#"
@@ -241,6 +257,7 @@ echo "#"
 grep -vc "^#" \
     $VCF_IN $FILTERED_AVINPUT \
     $CASECONTROL_TXT \
+    $CASECONTROL_SORT_VCF \
     $MULTIANNO_TXT $MULTIANNO_COLCLEAN_TXT $MULTIANNO_HFILT_TXT \
     $OUT_FIELDS \
     $OUT_DATA $OUT_DATA_COLCLEAN $OUT_DATA_HFILT \

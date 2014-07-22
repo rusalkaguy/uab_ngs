@@ -62,7 +62,7 @@ FILTERED_AVINPUT=$AVINPUT
 #INPUT=$AVINPUT
 #OUTPUT=$FILTERED_AVINPUT
 #SCRIPT=~/uab_ngs/annovar/doit.variants_reduction.sh
-#if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; thenecho "SKIP"; else
+#if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
 #    date
 #    $SCRIPT $AVINPUT
 #    RC=$?; date

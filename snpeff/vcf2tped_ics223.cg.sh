@@ -24,6 +24,11 @@ if [ ! -e "$IN" ]; then
     echo "ERROR: can't read input .vcf file: $IN"; 
     exit 1 2>&1 > /dev/null
 fi
+
+echo "The variable IN is $IN"
+echo "The variable OUT_BASE is $OUT_BASE"
+echo "The variable PHENO_CODING is $PHENO_CODING"
+
 if [ ! -e "$PHENO_CODING" ]; then 
     echo "ERROR: can't read input coding2group2sample file: $PHENO_CODING"; 
     echo "ERROR: first col=sample name"
@@ -84,10 +89,15 @@ for phenotype in $COMPARE_LIST; do
 	PHENOTYPE_STATUS=0 # missing
 
 	# look up sample group/cohort
-	SAMPLE_GROUP=`egrep "^$sample\s" $SAMPLE_DEF|cut -f 2`
+	echo "SAMPLE_GROUP=`grep -w "^$sample" $SAMPLE_DEF|cut -f 2`"
+	echo "if [ -z "$SAMPLE_GROUP" ]; then echo "ERROR: MISSING $sample NOT FOUND IN $SAMPLE_DEF"; exit 1; fi"
+	SAMPLE_GROUP=`grep -w "^$sample" $SAMPLE_DEF|cut -f 2`
 	if [ -z "$SAMPLE_GROUP" ]; then echo "ERROR: MISSING $sample NOT FOUND IN $SAMPLE_DEF"; exit 1; fi
 	# look up group/cohort phenotype
-	SAMPLE_PHENO=`egrep "^$SAMPLE_GROUP\s" $PHENO_DEF|cut -f 2`
+	SAMPLE_PHENO=`grep -w "^$SAMPLE_GROUP" $PHENO_DEF|cut -f 2`
+	echo "if [ -z "$SAMPLE_PHENO" ]; then echo "ERROR: MISSING $SAMPLE_GROUP NOT FOUND IN $PHENO_DEF"; exit 1; fi"
+	echo "PHENO_CODE=`awk '($1=="'$phenotype'"&&($2=="'$SAMPLE_GROUP'"||$3=="'$SAMPLE_PHENO'")){print $4}' $PHENO_CODING`"
+
 	if [ -z "$SAMPLE_PHENO" ]; then echo "ERROR: MISSING $SAMPLE_GROUP NOT FOUND IN $PHENO_DEF"; exit 1; fi
 	# look up phenotype coding for this comparison & this group and phenotype
 	PHENO_CODE=`awk '($1=="'$phenotype'"&&($2=="'$SAMPLE_GROUP'"||$3=="'$SAMPLE_PHENO'")){print $4}' $PHENO_CODING`
@@ -116,5 +126,3 @@ for phenotype in $COMPARE_LIST; do
     echo "        2 affected   $STATUS_2"
     echo "          total      "$(($STATUS_0 + $STATUS_1 + $STATUS_2)) 
 done
-
-    

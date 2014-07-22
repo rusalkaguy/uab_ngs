@@ -3,6 +3,13 @@
 # GATK CombineVariants 
 # http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_variantutils_CombineVariants.html
 #
+
+#if [[ -z $NSLOTS ]]; then
+#	$NSLOTS=1
+#fi
+
+TARGETGENE="ITGAM"
+
 module load java/jre1.7.0_51
 GATK=/share/apps/ngs-ccts/GenomeAnalysisTK/GenomeAnalysisTK-3.0-0/GenomeAnalysisTK.jar 
 REF=/scratch/share/public_datasets/ngs/databases/gatk_bundle/2.5/b37/human_g1k_v37.fasta
@@ -10,9 +17,10 @@ MERGE_OPT=PRIORITIZE # UNIQUIFY
 # get list of cohorts
 GROUP_LIST=`ls *.vcfBeta*vcf | cut -f 1 -d . | uniq`
 echo GROUP_LIST=$GROUP_LIST
+
 ALL_GROUP=`echo $GROUP_LIST | perl -pe 's/ /./g;'`
 echo ALL_GROUP=$ALL_GROUP
-SUFFIX="vcfBeta-ALL-ASM.ITGAM.vcf"
+SUFFIX="vcfBeta-ALL-ASM.$TARGETGENE.vcf"
 mkdir -p MERGED JOBS
 
 # for each group
@@ -37,7 +45,7 @@ for GROUP in $GROUP_LIST; do
     # run GATK merger
     echo "$GROUP has " `ls -1 $SAMPLES | wc -l` "samples"
     java -Xmx20g -Xms20g -jar $GATK \
-	-nt 4 \
+	-nt 1 \
 	-R $REF \
 	-T CombineVariants \
 	-o $GROUP_OUT \
@@ -45,8 +53,7 @@ for GROUP in $GROUP_LIST; do
 	-priority $PRIO_LIST \
 	$VAR_LIST \
 	> JOBS/$GROUP.merge.so \
-	2> JOBS/$GROUP.merge.se \
-	&
+	2> JOBS/$GROUP.merge.se 
 done
 
 jobs 
@@ -71,7 +78,7 @@ ALL_GROUP_OUT=MERGED/$ALL_GROUP.$SUFFIX
 # run GATK merger
 echo "$ALL_GROUP has " `echo $GROUP_LIST | wc -w` "samples"
 java -Xmx20g -Xms20g -jar $GATK \
-	-nt 4 \
+	-nt 1 \
 	-R $REF \
 	-T CombineVariants \
 	-o $ALL_GROUP_OUT \
@@ -79,9 +86,7 @@ java -Xmx20g -Xms20g -jar $GATK \
 	-priority $PRIO_LIST \
 	$VAR_LIST \
 	> JOBS/$ALL_GROUP.merge.so \
-	2> JOBS/$ALL_GROUP.merge.se \
-	&
+	2> JOBS/$ALL_GROUP.merge.se 
 
 jobs
 wait
-

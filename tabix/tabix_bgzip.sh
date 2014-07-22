@@ -36,14 +36,14 @@ while [[ -n "$1" ]]; do
     fi
 
     # figure out compress named
-    if [[ "$VCF" == *.vcf.gz  ]]; then 
+    if [[ "$TARGET" == *.gz  ]]; then 
 	GZ=$TARGET
     else 
 	GZ="${TARGET}.gz"
     fi
 
     # compress if not compressed
-    if [[ -e "${TARGET}.gz" && "$GZ" -nt "$TARGET" ]]; then 
+    if [[ -e "$GZ" && ("$GZ" -nt "$TARGET" || "$TARGET" == "$GZ" ) ]]; then 
 	echo "SKIP: Found up-to-date TARGET.gz - hope it's bgzipped..."
     else
         # if auto-qsub, do that here, per sample
@@ -60,11 +60,11 @@ while [[ -n "$1" ]]; do
     fi
 
     # tabix index - setup flags
-    if [[ -e "${GZ}.tbi" || "${GZ}.tbi" -nt "$GZ" ]]; then 
+    if [[ -e "${GZ}.tbi" && "${GZ}.tbi" -nt "$GZ" ]]; then 
 	echo "SKIP: Found up-to-date TARGET.gz.tbi ..."
     else
         # if auto-qsub, do that here, per sample
-	if [ -n "$DO_QSUB" ]; then echo -n "qsub job_id="; qsub -terse -N `basename $0.sh`-`basename $TARGET` -M $USER@uab.edu $0 $TARGET; continue; fi
+	if [ -n "$DO_QSUB" ]; then echo -n "qsub job_id="; qsub -terse -N `basename $0 .sh`-`basename $TARGET` -M $USER@uab.edu $0 $TARGET; continue; fi
 
 	# do work in-line
 	# setup flags from extension
@@ -73,7 +73,7 @@ while [[ -n "$1" ]]; do
 	if [[ "$GZ" == *.gff.gz && -z "$FLAGS" ]]; then FLAGS="-p gff"; fi
 	if [[ "$GZ" == *.bed.gz && -z "$FLAGS" ]]; then FLAGS="-p bed"; fi
 
-	CMD="tabix $FLAGS $GZ"
+	CMD="tabix $FLAGS -f $GZ"
 	echo $CMD
 	$CMD
 	RC=$?

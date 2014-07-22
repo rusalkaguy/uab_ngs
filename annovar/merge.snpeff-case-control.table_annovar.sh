@@ -33,7 +33,7 @@ paste \
 
 (head -n 1 $OUT_DATA_USORT; \
     grep -v "^#" $OUT_DATA_USORT \
-	| sort -k1,1 -k2,2n \
+	| ~/uab_ngs/linux_plus/sort_chr_pos.sh \
 ) > $OUT_DATA
 
 echo ""
