@@ -23,15 +23,15 @@ CASECONTROL_TXT=`basename $VCF_IN .vcf`.caseControl.txt
 OUT_FIELDS=`basename $VCF_IN .vcf`.caseControl.annovar.fields.txt
 OUT_DATA=`basename $VCF_IN .vcf`.caseControl.annovar.data.txt
 OUT_DATA_COLCLEAN=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.txt
-OUT_DATA_HFILT=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.txt
-OUT_DATA_HFILT_STATS=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.stats
-OUT_DATA_AAF05=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf05.txt
+OUT_DATA_HFILT=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.txt
+OUT_DATA_HFILT_STATS=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.stats
+OUT_DATA_AAF05=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.aaf05.txt
 OUT_DATA_AAF05_STATS=`basename $OUT_DATA_AAF05 .txt`.stats
-OUT_DATA_AAF03=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf03.txt
+OUT_DATA_AAF03=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.aaf03.txt
 OUT_DATA_AAF03_STATS=`basename $OUT_DATA_AAF03 .txt`.stats
-OUT_DATA_AAF01=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf01.txt
+OUT_DATA_AAF01=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.aaf01.txt
 OUT_DATA_AAF01_STATS=`basename $OUT_DATA_AAF01 .txt`.stats
-OUT_DATA_NOVEL=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf00.txt
+OUT_DATA_NOVEL=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.aaf00.txt
 OUT_DATA_NOVEL_STATS=`basename $OUT_DATA_NOVEL .txt`.stats
 
 if [[ -z "$VCF_IN" || ! -e "$VCF_IN" || -z "$ABBREV_IN" || ! -e "$PHENO_CODING" ]]; then
