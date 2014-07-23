@@ -89,15 +89,10 @@ for phenotype in $COMPARE_LIST; do
 	PHENOTYPE_STATUS=0 # missing
 
 	# look up sample group/cohort
-	echo "SAMPLE_GROUP=`grep -w "^$sample" $SAMPLE_DEF|cut -f 2`"
-	echo "if [ -z "$SAMPLE_GROUP" ]; then echo "ERROR: MISSING $sample NOT FOUND IN $SAMPLE_DEF"; exit 1; fi"
 	SAMPLE_GROUP=`grep -w "^$sample" $SAMPLE_DEF|cut -f 2`
 	if [ -z "$SAMPLE_GROUP" ]; then echo "ERROR: MISSING $sample NOT FOUND IN $SAMPLE_DEF"; exit 1; fi
 	# look up group/cohort phenotype
 	SAMPLE_PHENO=`grep -w "^$SAMPLE_GROUP" $PHENO_DEF|cut -f 2`
-	echo "if [ -z "$SAMPLE_PHENO" ]; then echo "ERROR: MISSING $SAMPLE_GROUP NOT FOUND IN $PHENO_DEF"; exit 1; fi"
-	echo "PHENO_CODE=`awk '($1=="'$phenotype'"&&($2=="'$SAMPLE_GROUP'"||$3=="'$SAMPLE_PHENO'")){print $4}' $PHENO_CODING`"
-
 	if [ -z "$SAMPLE_PHENO" ]; then echo "ERROR: MISSING $SAMPLE_GROUP NOT FOUND IN $PHENO_DEF"; exit 1; fi
 	# look up phenotype coding for this comparison & this group and phenotype
 	PHENO_CODE=`awk '($1=="'$phenotype'"&&($2=="'$SAMPLE_GROUP'"||$3=="'$SAMPLE_PHENO'")){print $4}' $PHENO_CODING`
