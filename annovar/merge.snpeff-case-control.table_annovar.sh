@@ -30,6 +30,7 @@ paste \
     <(grep -v "^##" $IN_SNPSIFT_CC_TXT| cut -f 1-) \
     <(grep -v "^#" $IN_TABLE_ANNOVAR | cut -f 1-) \
     > $OUT_DATA_USORT
+echo `grep -c "^c" $OUT_DATA_USORT` "variants in $OUT_DATA_USORT"
 
 (head -n 1 $OUT_DATA_USORT; \
     grep -v "^#" $OUT_DATA_USORT \
@@ -37,7 +38,7 @@ paste \
 ) > $OUT_DATA
 
 echo ""
-echo "OUT_DATA + header " `wc -l $OUT_DATA`
+echo `wc -l $OUT_DATA` "variants + header in $OUT_DATA"
 
 echo "extracting header"
 echo "SRC	ID	Number	Type	Description" > $OUT_FIELDS
