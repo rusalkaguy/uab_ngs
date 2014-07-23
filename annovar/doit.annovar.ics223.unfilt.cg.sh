@@ -47,6 +47,7 @@ OUTPUT=$AVINPUT
 SCRIPT=./uab_ngs/annovar/convert2annovar.vcf4old.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "$SCRIPT $VCF_IN $AVINPUT"
     $SCRIPT $VCF_IN $AVINPUT
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -64,6 +65,7 @@ FILTERED_AVINPUT=$AVINPUT
 #SCRIPT=./uab_ngs/annovar/doit.variants_reduction.sh
 #if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
 #    date
+#    echo "$SCRIPT $AVINPUT"
 #    $SCRIPT $AVINPUT
 #    RC=$?; date
 #    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -79,6 +81,7 @@ FILTERED_AVINPUT=$AVINPUT
 #SCRIPT=./uab_ngs/annovar/doit.table_annovar.sh
 #if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
 #    date
+#    echo "$SCRIPT $INPUT $OUTPUT"
 #    $SCRIPT $INPUT $OUTPUT
 #    RC=$?; date
 #    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -93,6 +96,7 @@ OUTPUT=$FULL_MULTIANNO_TXT
 SCRIPT=./uab_ngs/annovar/doit.table_annovar.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "$SCRIPT $INPUT $OUTPUT"
     $SCRIPT $INPUT $OUTPUT
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -109,6 +113,7 @@ OUTPUT2=$CASECONTROL_TXT
 SCRIPT=./uab_ngs/snpeff/snpsift_case_control_ics223.cg.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT"&& "$OUTPUT" -nt "$INPUT2" ]]; then echo "SKIP"; else
     date
+    echo "$SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT $PHENO_CODING"
     $SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT $PHENO_CODING
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -127,6 +132,7 @@ OUTPUT2=$OUT_FIELDS
 SCRIPT=./uab_ngs/annovar/merge.snpeff-case-control.table_annovar.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT"  && "$OUTPUT" -nt "$INPUT2" ]]; then echo "SKIP"; else
     date; 
+    echo "$SCRIPT $INPUT $INPUT2"
     $SCRIPT $INPUT $INPUT2
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -144,6 +150,7 @@ OUTPUT=$OUT_DATA_COLCLEAN
 SCRIPT=./uab_ngs/annovar/annovar_multianno_split_columns.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT > $OUTPUT"
     cat $INPUT | $SCRIPT > $OUTPUT
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -161,6 +168,7 @@ OUTPUT2=$OUT_DATA_HFILT_STATS
 SCRIPT=./uab_ngs/annovar/annovar_multianno_stats_annotate.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -179,6 +187,7 @@ OUTPUT2=$OUT_DATA_AAF05_STATS
 SCRIPT=./uab_ngs/annovar/filter_named_column.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT max_aaf \"<=\" 0.05 > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT max_aaf "<=" 0.05 > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -197,6 +206,7 @@ OUTPUT2=$OUT_DATA_AAF03_STATS
 SCRIPT=./uab_ngs/annovar/filter_named_column.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT max_aaf \"<=\" 0.03 > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT max_aaf "<=" 0.03 > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -215,6 +225,7 @@ OUTPUT2=$OUT_DATA_AAF01_STATS
 SCRIPT=./uab_ngs/annovar/filter_named_column.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT max_aaf \"<=\" 0.01 > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT max_aaf "<=" 0.01 > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -233,6 +244,7 @@ OUTPUT2=$OUT_DATA_NOVEL_STATS
 SCRIPT=./uab_ngs/annovar/filter_named_column.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT is_novel \"eq\" 1 > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT is_novel "eq" 1 > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
