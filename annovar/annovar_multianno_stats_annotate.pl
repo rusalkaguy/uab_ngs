@@ -121,22 +121,22 @@ while(<>) {
 
 	# count at levels
 	$counts{variant_maf05}++ if($max_maf <= 0.05);
-	$counts{indel_maf05}++ if($max_maf <= 0.05 && $is_indel);
+	$counts{indel_maf05}++ if($max_maf <= 0.05 && !$is_snp);
 	$counts{variant_maf03}++ if($max_maf <= 0.03);
-	$counts{indel_maf03}++ if($max_maf <= 0.03 && $is_indel);
+	$counts{indel_maf03}++ if($max_maf <= 0.03 && !$is_snp);
 	$counts{variant_maf01}++ if($max_maf <= 0.01);
-	$counts{indel_maf01}++ if($max_maf <= 0.01 && $is_indel);
+	$counts{indel_maf01}++ if($max_maf <= 0.01 && !$is_snp);
 	# actually filter novel
 	if( !$is_novel)	{ 
 	    $counts{variant_known}++; 
-	    $counts{indel_known}++ if( $is_indel); 
+	    $counts{indel_known}++ if( ! $is_snp ); 
 	    if( $req_novel ) {
-		print "[$linenum] DROP DATA[#col=",scalar(@fields),",is_indel=?, is_novel=$is_novel : $snp137,$max_maf\n"  if($debug);
+		print "[$linenum] DROP DATA[#col=",scalar(@fields),",is_snp=?, is_novel=$is_novel : $snp137,$max_maf\n"  if($debug);
 		next;
 	    }
 	} else {
 	    $counts{variant_novel}++ ;
-	    $counts{indel_novel}++ if( $is_indel); 
+	    $counts{indel_novel}++ if( !$is_snp ); 
 	};
 
 	#
@@ -161,7 +161,7 @@ while(<>) {
 	    
 
 	# eleminate if it is a SNP and fails all three impact scores. 
-	if( !$is_indel ) {
+	if( $is_snp ) {
 	    my $pphen_hit = ($pphenHdiv2 > $pphenHdiv2_min)?1:0;
 	    my $sift_hit = ($sift2 <= $sift2_maxeq)?1:0;
 	    my $cadd_hit = ($cadd_phred > $cadd_min)?1:0;
@@ -180,7 +180,7 @@ while(<>) {
 	    #print "DROP KEY $hit_key $and_counts{$hit_key} $or_counts{$hit_key}\n";
 #	    if( ! ($pphen_hit || $sift_hit || $cadd_hit) ) {
 #		# reject snp as un-interesting
-#		print "[$linenum] DROP DATA[#col=",scalar(@fields),",is_indel=$is_indel]\n"  if($debug);
+#		print "[$linenum] DROP DATA[#col=",scalar(@fields),",is_snp=$is_snp]\n"  if($debug);
 #		next;
 #	    } else {
 		# pass as possibly interesting 
@@ -193,7 +193,7 @@ while(<>) {
 	    $cadd_pass_max = $cadd_phred if( $cadd_phred > $cadd_pass_max);
 	}
 
-	print "[$linenum] PASS DATA[#col=",scalar(@fields),",is_indel=$is_indel]\n"  if($debug);
+	print "[$linenum] PASS DATA[#col=",scalar(@fields),",is_snp=$is_snp]\n"  if($debug);
 	print join("\t",@fields),"\n";
     }
     
