@@ -1,0 +1,4 @@
+# don't check in VCF files 
+*.vcf
+# don't check in log files
+*.log
