@@ -2,9 +2,9 @@
 
 module load ngs-ccts/tabix/0.2.6
 
-SCRIPT_DIR="/home/vlaufer/uab_ngs"
+SCRIPT_DIR="/home/$USER/uab_ngs"
 GENE_LIST="$SCRIPT_DIR/TARGET_GENE_LIST.txt"
-BASE_DIR="/rstore/user/vlaufer/default/VCFs"
+BASE_DIR="/rstore/user/$USER/default/VCFs"
 FOLDERS="$BASE_DIR/Folders.txt"
 
 while read FOLDER; do
