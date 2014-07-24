@@ -47,7 +47,8 @@ echo `grep -vc "^#" $ANNOVAR_VCF`" variants in $ANNOVAR_VCF"
 echo "***************************************************************"
 echo "generate .tfam files from VCF $IN"
 if [ ! -e $IN_BASE.sleVnorm.tfam ]; then 
-    ~/uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING
+    echo "./uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING"
+    ./uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING
     RC=$?; if [ $RC != 0 ]; then echo "ERROR: RC=$RC"; exit $RC; fi
 else
     echo SKIP
