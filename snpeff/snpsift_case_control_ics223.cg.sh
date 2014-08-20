@@ -6,7 +6,7 @@ NAME="$2"          # HC200
 ANNOVAR_IN="$3"    # vcf4old.inc.com/hc_pad200_hg19.reduce.step4.varlist
 PHENO_CODING="$4"  # cohort_pheno_compare_coding.wustl.cg.txt
 # NOTE: SAMPLE_DEF, PHENO_DEF and PHENO_CODING should all be linked, rather than specified explicitly. 
-# likley PHENO_CODING shoudl point to PHENO_DEF, which should point to SAMPLE_DEF
+# likely PHENO_CODING should point to PHENO_DEF, which should point to SAMPLE_DEF
 if [[ -z "$4" ]]; then
     echo "ERROR: syntax $0 VCF_IN ABBREV ANNOVAR_IN PHENO_DEF"
     exit 1;
@@ -47,7 +47,8 @@ echo `grep -vc "^#" $ANNOVAR_VCF`" variants in $ANNOVAR_VCF"
 echo "***************************************************************"
 echo "generate .tfam files from VCF $IN"
 if [ ! -e $IN_BASE.sleVnorm.tfam ]; then 
-    ~/uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING
+    echo "./uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING"
+    ./uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING
     RC=$?; if [ $RC != 0 ]; then echo "ERROR: RC=$RC"; exit $RC; fi
 else
     echo SKIP

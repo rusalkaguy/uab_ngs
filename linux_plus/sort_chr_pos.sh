@@ -36,10 +36,10 @@ for SRC in $SRCS; do
 done
 
 # do the actual work
-grep -h "^#"            $SAFE_SRCS 
-egrep -h "^chr[0-9]+	"     $SAFE_SRCS | sort -k1.4,1.100n -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then echo ERROR; exit $RC; fi
-egrep -h "^chr[XY]	"      $SAFE_SRCS | sort -k1.4,1.5    -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then exit $RC; fi
-egrep -h "^chr[M]	"       $SAFE_SRCS | sort -k1.4,1.5    -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then exit $RC; fi
-egrep -h "^chr[0-9]+[^0-9]+	"     $SAFE_SRCS | sort -k1.4,1.100 -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then exit $RC; fi
-egrep -h "^chr[^0-9XYM]	" $SAFE_SRCS | sort -k1.4,1.100  -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then exit $RC; fi
+grep -h "^#"            	$SAFE_SRCS  # headers
+grep -Ewh "^chr[0-9]+"     	$SAFE_SRCS | sort -k1.4,1.100n -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then echo ERROR; exit $RC; fi
+grep -Ewh "^chr[XY]"      	$SAFE_SRCS | sort -k1.4,1.5    -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then exit $RC; fi
+grep -Ewh "^chr[M]"       	$SAFE_SRCS | sort -k1.4,1.5    -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then exit $RC; fi
+grep -Ewh "^chr[0-9]+[^0-9]+"   $SAFE_SRCS | sort -k1.4,1.100 -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then exit $RC; fi
+grep -Ewh "^chr[^0-9XYM]"  	$SAFE_SRCS | sort -k1.4,1.100  -k2,2n $SORT_FLAGS;   RC=$?; if [ $RC != 0 ]; then exit $RC; fi
 exit 0

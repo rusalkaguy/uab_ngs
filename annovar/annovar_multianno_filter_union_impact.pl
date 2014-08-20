@@ -1,41 +1,21 @@
 #!/usr/bin/perl
 #
+# NOT YET TESTED
+#
 # custom multi-column filtering that ANNOVAR does not support
 #
-# OBSOLETE
-# split into 
-#    annovar_multianno_stats_annotate.pl
-#    annovar_multianno_filter_union_impact.pl
+# (evolved out of annovar_multianno_filter.pl, with stats removed, just filtering now)
 #
 use strict;
 use Data::Dumper;
 
+my %counts = (
+	      variants => 0,
+	      );
 
 my %CHROM;
 my $parsed_header = 0;
 my $debug=0;
-
-# stats
-my %counts = (
-    variant => 0,
-    snp => 0,
-    indel => 0,
-    snp_pass => 0,
-    cadd_hit => 0,
-    pphen_hit => 0,
-    sift_hit => 0,
-    sift_and_pphen_hit => 0,
-    sift_or_pphen_hit => 0,
-    cadd_and_sift_and_pphen_hit => 0,
-);
-my %and_counts;
-my %or_counts;
-
-my $cadd_obs_min = 50; 
-my $cadd_obs_max= -50;
-my $cadd_pass_min = 50; 
-my $cadd_pass_max= -50;
-
 
 #
 # thresholds 
@@ -68,8 +48,6 @@ while(<>) {
 	    print "[$linenum] #CHROM header\n" if($debug);
 	    my $index = 0;
 	    my @header_keys = split(m/[\t\n\r]/,$_);
-	    push @header_keys, "max_aaf";
-	    push @header_keys, "is_novel";
 	    foreach my $key ( @header_keys ) {
 		$CHROM{$key} = $index; 
 		print "\t#CHROM[$index]: $key -> $index\n" if($debug);
@@ -115,17 +93,7 @@ while(<>) {
 		}
 	    }
 	}
-	# add max_aaf as column
-	$fields[$CHROM{"max_aaf"}] = $max_maf;
-	$fields[$CHROM{"is_novel"}] = $is_novel;
 
-	# count at levels
-	$counts{variant_maf05}++ if($max_maf <= 0.05);
-	$counts{indel_maf05}++ if($max_maf <= 0.05 && $is_indel);
-	$counts{variant_maf03}++ if($max_maf <= 0.03);
-	$counts{indel_maf03}++ if($max_maf <= 0.03 && $is_indel);
-	$counts{variant_maf01}++ if($max_maf <= 0.01);
-	$counts{indel_maf01}++ if($max_maf <= 0.01 && $is_indel);
 	# actually filter novel
 	if( !$is_novel)	{ 
 	    $counts{variant_known}++; 
@@ -146,18 +114,21 @@ while(<>) {
 
 	# CADD score (scaled)
 	my $cadd_phred=$fields[$CHROM{cadd}];
-	if( "NA" ne $fields[$CHROM{cadd}] ) {
-	    $cadd_obs_min = $cadd_phred if( $cadd_phred < $cadd_obs_min);
-	    $cadd_obs_max = $cadd_phred if( $cadd_phred > $cadd_obs_max);
-	} else {
+	if( "NA" eq $fields[$CHROM{cadd}] ) {
 	    $cadd_phred = 0;  # replace missing data with sentinal value 0
 	}
 
 	# PolyPhen 
 	my $pphenHdiv2=$fields[$CHROM{LJB2_PolyPhen2_HDIV}];
+	if( "NA" eq $fields[$CHROM{LJB2_PolyPhen2_HDIV}] ) {
+	    $pphenHdiv2 = 0;  # replace missing data with sentinal value 0
+	}
 	
 	# SIFT
 	my $sift2=$fields[$CHROM{LJB2_SIFT}];
+	if( "NA" eq $fields[$CHROM{LJB2_PolyPhen2_HDIV}] ) {
+	    $pphenHdiv2 = 0;  # replace missing data with sentinal value 0
+	}
 	    
 
 	# eleminate if it is a SNP and fails all three impact scores. 
@@ -165,18 +136,7 @@ while(<>) {
 	    my $pphen_hit = ($pphenHdiv2 > $pphenHdiv2_min)?1:0;
 	    my $sift_hit = ($sift2 <= $sift2_maxeq)?1:0;
 	    my $cadd_hit = ($cadd_phred > $cadd_min)?1:0;
-	    my $hit_key = "$cadd_hit$pphen_hit$sift_hit";
 
-	    $counts{cadd_hit}++ if( $cadd_hit);
-	    $counts{sift_hit}++ if( $sift_hit);
-	    $counts{pphen_hit}++ if( $pphen_hit);
-	    $counts{sift_and_pphen_hit}++ if( $pphen_hit && $sift_hit);
-	    $counts{sift_or_pphen_hit}++ if( $pphen_hit || $sift_hit);
-	    $counts{cadd_sift_and_pphen_hit}++ if( $cadd_hit && $pphen_hit && $sift_hit);
-	    $counts{cadd_sift_or_pphen_hit}++ if( $cadd_hit || $pphen_hit || $sift_hit);
-
-	    $and_counts{$hit_key}++;
-	    $or_counts{$hit_key}++ if( $cadd_hit || $pphen_hit || $sift_hit);
 	    #print "DROP KEY $hit_key $and_counts{$hit_key} $or_counts{$hit_key}\n";
 	    if( ! ($pphen_hit || $sift_hit || $cadd_hit) ) {
 		# reject snp as un-interesting
@@ -187,12 +147,6 @@ while(<>) {
 		$counts{snp_pass}++;
 	    }
 	}
-	# track cadd scores for pphen/sift hits
-	if( "NA" ne $fields[$CHROM{cadd}] ) {
-	    $cadd_pass_min = $cadd_phred if( $cadd_phred < $cadd_pass_min);
-	    $cadd_pass_max = $cadd_phred if( $cadd_phred > $cadd_pass_max);
-	}
-
 	print "[$linenum] PASS DATA[#col=",scalar(@fields),",is_indel=$is_indel]\n"  if($debug);
 	print join("\t",@fields),"\n";
     }
@@ -209,28 +163,3 @@ print STDERR "#         cadd_min=$cadd_min\n";
 print STDERR "#     indel_count=$counts{indel}\n";
 print STDERR "#     snp_count=$counts{snp}\n";
 print STDERR "#     snp_pass=$counts{snp_pass}\n";
-foreach my $k ( sort keys %counts ) {
-    print STDERR "#         $k=$counts{$k}\n";
-}
-#print STDERR "AND=",Dumper(\%and_counts),"\n";
-#print STDERR "OR=",Dumper(\%or_counts),"\n";
-print STDERR join("\t", "#", "AND",  "cadd", "pphen", "sift", "pp+sift" ), "\n";
-print STDERR join("\t", "#", "tot",   $counts{cadd_hit},$counts{pphen_hit},$counts{sift_hit},$counts{sift_and_pphen_hit}), "\n";
-print STDERR join("\t", "#", "cadd",  $and_counts{"100"},$and_counts{"110"},$and_counts{"101"},$and_counts{"111"}), "\n";
-print STDERR join("\t", "#", "pphen", $and_counts{"110"},$and_counts{"010"},$and_counts{"011"},$and_counts{"011"}), "\n";
-print STDERR join("\t", "#", "sift",  $and_counts{"101"},$and_counts{"011"},$and_counts{"001"},$and_counts{"011"}), "\n";
-print STDERR join("\t", "#", "OR", "cadd|pphen", "cadd|sift", "pphen|sift", "cadd|pphen|sift" ), "\n";
-print STDERR join("\t", "#", "tot",
-		  $or_counts{"110"}+$or_counts{"010"}+$or_counts{"100"},
-		  $or_counts{"101"}+$or_counts{"001"}+$or_counts{"100"},
-		  $or_counts{"011"}+$or_counts{"001"}+$or_counts{"010"},
-		  $or_counts{"111"}+$or_counts{"001"}+$or_counts{"010"}+$or_counts{"100"}+$or_counts{"110"}+$or_counts{"101"}+$or_counts{"011"}
-    ), "\n";
-#print STDERR "# counts=", Dumper(\%counts),"\n";
-
-print STDERR "#\n" ;
-    print STDERR "# extra stats\n";
-print STDERR "# cadd_obs_min=$cadd_obs_min\n";
-print STDERR "# cadd_obs_max=$cadd_obs_max\n";
-print STDERR "# cadd_pass_min=$cadd_pass_min\n";
-print STDERR "# cadd_pass_max=$cadd_pass_max\n";
