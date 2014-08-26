@@ -1,11 +1,15 @@
 #!/bin/bash
 # 
-# qstat_full_job_names [qstat parameters]
+# qstat_full_job_names [-q] [qstat parameters]
 #
 # 
 # list full jobs names for all specified jobs
 # and various other stats in tab-column format 
 ATTR_LIST="job_name hard usage parallel.environment"
+if [ "$1" == "-q" ]; then 
+    ATTR_LIST="job_name"
+    shift
+fi
 if [ "$1" == "-j" ]; then
     # -j job_id [job_ids]
     shift
