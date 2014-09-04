@@ -78,6 +78,11 @@ while (my $line=<> ) {
     my $v_qc =$variant[6];
     my $v_info=$variant[7]; 
     my $v_format=$variant[8];
+
+
+    # handle info fields
+
+    # check formatting of variants
     if( $first_format && $first_format ne $v_format ) {
 	print "ERROR: ${vcf_filename}:${linenum}: format string not consistent: $v_format != $first_format\n";
 	exit(1);
@@ -86,10 +91,11 @@ while (my $line=<> ) {
 	# header, part2
 	print "\t",join("\t","GTclass", "GTsubclass", split(":",$v_format)), "\n";
     }
-	
+    
+
     # EXPORT samples per variant
     for(my $i=9; $i < scalar(@chrom); $i++) {
-	my @v_info = split(/:/, $variant[$i]);
+	my @s_info = split(/:/, $variant[$i]);
 
 	# lookup sample group
 	my $group = $sample_groups{$chrom[$i]};
@@ -99,12 +105,12 @@ while (my $line=<> ) {
 
 	# convert index genotype to real genotype
 	my $genotype;
-	if( $v_info[0] =~ m/([.0-9]+)(.)([.0-9]+)(.*)/ ) {
+	if( $s_info[0] =~ m/([.0-9]+)(.)([.0-9]+)(.*)/ ) {
 	    my($gt1, $phased, $gt2, $gtx)=($1,$2,$3,$4);
 	    
 	    $genotype = join("", ($gt1 eq ".")?".":$alleles[$gt1], $phased,  ($gt2 eq ".")?".":$alleles[$gt2], $gtx);
 	    if( $gtx ) {
-		print STDERR "WARNING: ${vcf_filename}:${linenum}:${i}: genotype info has more than 2 alleles per sample: $chrom[$i] => $v_info[0]\n";
+		print STDERR "WARNING: ${vcf_filename}:${linenum}:${i}: genotype info has more than 2 alleles per sample: $chrom[$i] => $s_info[0]\n";
 	    }		
 	    # genotype classification
 	    if( $gt1 eq "0" && $gt2 eq "0" ) { $genoclass="HomRef"; $genosubclass=$genoclass; }
@@ -114,12 +120,12 @@ while (my $line=<> ) {
 	    $genosubclass="HetAlt" if( $gt1 ne $gt2 && ($gt1 ne "0" && $gt2 ne "0") && ($gt1 ne "." && $gt2 ne "."));
 	    #print STDERR "[${linenum}:${i}] $gt1$phased$gt2 = $genoclass, $genosubclass\n";
 	} else {
-	    print STDERR "ERROR: ${vcf_filename}:${linenum}:${i}: can't parse genotype info: $v_info[0]\n";
+	    print STDERR "ERROR: ${vcf_filename}:${linenum}:${i}: can't parse genotype info: $s_info[0]\n";
 	    exit 1;
 	}
 
 	# replace index based GT
-	$v_info[0] = $genotype;
+	$s_info[0] = $genotype;
 
 
 	print join("\t", 
@@ -140,7 +146,7 @@ while (my $line=<> ) {
 		   #$genotype,
 		   $genoclass,
 		   $genosubclass,
-		   @v_info,
+		   @s_info,
 		   ),
 	"\n";
     }
