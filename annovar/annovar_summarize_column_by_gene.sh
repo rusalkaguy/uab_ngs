@@ -19,7 +19,7 @@ COLUMN="AC"
 if [ -n "$3" ]; then COLUMN=$3; fi
 T=`mktemp`
 cat - > $T
-COLNUM=`grep "#CHR" $T | ~/uab_ngs/linux_plus/transpose | grep -n $COLUMN | cut -d : -f 1`
+COLNUM=`grep "#CHR" $T | ./uab_ngs/linux_plus/transpose | grep -n $COLUMN | cut -d : -f 1`
 if [ -z "$COLNUM" ]; then 
     echo "ERROR: column not found: $COLUMN in "`grep "^#CHR" $T`
     exit 1

@@ -23,15 +23,15 @@ CASECONTROL_TXT=`basename $VCF_IN .vcf`.caseControl.txt
 OUT_FIELDS=`basename $VCF_IN .vcf`.caseControl.annovar.fields.txt
 OUT_DATA=`basename $VCF_IN .vcf`.caseControl.annovar.data.txt
 OUT_DATA_COLCLEAN=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.txt
-OUT_DATA_HFILT=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.txt
-OUT_DATA_HFILT_STATS=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.stats
-OUT_DATA_AAF05=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf05.txt
+OUT_DATA_HFILT=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.txt
+OUT_DATA_HFILT_STATS=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.stats
+OUT_DATA_AAF05=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.aaf05.txt
 OUT_DATA_AAF05_STATS=`basename $OUT_DATA_AAF05 .txt`.stats
-OUT_DATA_AAF03=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf03.txt
+OUT_DATA_AAF03=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.aaf03.txt
 OUT_DATA_AAF03_STATS=`basename $OUT_DATA_AAF03 .txt`.stats
-OUT_DATA_AAF01=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf01.txt
+OUT_DATA_AAF01=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.aaf01.txt
 OUT_DATA_AAF01_STATS=`basename $OUT_DATA_AAF01 .txt`.stats
-OUT_DATA_NOVEL=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf00.txt
+OUT_DATA_NOVEL=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.anno.aaf00.txt
 OUT_DATA_NOVEL_STATS=`basename $OUT_DATA_NOVEL .txt`.stats
 
 if [[ -z "$VCF_IN" || ! -e "$VCF_IN" || -z "$ABBREV_IN" || ! -e "$PHENO_CODING" ]]; then
@@ -44,9 +44,10 @@ echo "# ANNOVAR: convert VCF to AVINPUT"
 echo "#"
 INPUT=$VCF_IN
 OUTPUT=$AVINPUT
-SCRIPT=~/uab_ngs/annovar/convert2annovar.vcf4old.sh
+SCRIPT=./uab_ngs/annovar/convert2annovar.vcf4old.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "$SCRIPT $VCF_IN $AVINPUT"
     $SCRIPT $VCF_IN $AVINPUT
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -61,9 +62,10 @@ FILTERED_AVINPUT=$AVINPUT
 #echo "#"
 #INPUT=$AVINPUT
 #OUTPUT=$FILTERED_AVINPUT
-#SCRIPT=~/uab_ngs/annovar/doit.variants_reduction.sh
-#if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; thenecho "SKIP"; else
+#SCRIPT=./uab_ngs/annovar/doit.variants_reduction.sh
+#if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
 #    date
+#    echo "$SCRIPT $AVINPUT"
 #    $SCRIPT $AVINPUT
 #    RC=$?; date
 #    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -76,9 +78,10 @@ FILTERED_AVINPUT=$AVINPUT
 #echo "#"
 #INPUT=$FILTERED_AVINPUT
 #OUTPUT=$MULTIANNO_TXT
-#SCRIPT=~/uab_ngs/annovar/doit.table_annovar.sh
+#SCRIPT=./uab_ngs/annovar/doit.table_annovar.sh
 #if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
 #    date
+#    echo "$SCRIPT $INPUT $OUTPUT"
 #    $SCRIPT $INPUT $OUTPUT
 #    RC=$?; date
 #    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -90,9 +93,10 @@ echo "# ANNOVAR: annotate ALL variants"
 echo "#"
 INPUT=$AVINPUT
 OUTPUT=$FULL_MULTIANNO_TXT
-SCRIPT=~/uab_ngs/annovar/doit.table_annovar.sh
+SCRIPT=./uab_ngs/annovar/doit.table_annovar.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "$SCRIPT $INPUT $OUTPUT"
     $SCRIPT $INPUT $OUTPUT
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -106,9 +110,10 @@ INPUT=$AVINPUT
 INPUT2=$PHENO_CODING
 OUTPUT=$CASECONTROL_VCF
 OUTPUT2=$CASECONTROL_TXT
-SCRIPT=~/uab_ngs/snpeff/snpsift_case_control_ics223.cg.sh
+SCRIPT=./uab_ngs/snpeff/snpsift_case_control_ics223.cg.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT"&& "$OUTPUT" -nt "$INPUT2" ]]; then echo "SKIP"; else
     date
+    echo "$SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT $PHENO_CODING"
     $SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT $PHENO_CODING
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -124,9 +129,10 @@ INPUT=$CASECONTROL_TXT
 INPUT2=$FULL_MULTIANNO_TXT
 OUTPUT=$OUT_DATA
 OUTPUT2=$OUT_FIELDS
-SCRIPT=~/uab_ngs/annovar/merge.snpeff-case-control.table_annovar.sh
+SCRIPT=./uab_ngs/annovar/merge.snpeff-case-control.table_annovar.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT"  && "$OUTPUT" -nt "$INPUT2" ]]; then echo "SKIP"; else
     date; 
+    echo "$SCRIPT $INPUT $INPUT2"
     $SCRIPT $INPUT $INPUT2
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -141,9 +147,10 @@ echo "# ANNOVAR: cleanup compound columns"
 echo "#"
 INPUT=$OUT_DATA
 OUTPUT=$OUT_DATA_COLCLEAN
-SCRIPT=~/uab_ngs/annovar/annovar_multianno_split_columns.pl
+SCRIPT=./uab_ngs/annovar/annovar_multianno_split_columns.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT > $OUTPUT"
     cat $INPUT | $SCRIPT > $OUTPUT
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -153,14 +160,15 @@ echo ""
 
 echo ""
 echo "#"
-echo "# ANNOVAR: hand-filter annotated variants"
+echo "# ANNOVAR: count variant types/classes, add is_novel, max_aaf columns"
 echo "#"
 INPUT=$OUT_DATA_COLCLEAN
 OUTPUT=$OUT_DATA_HFILT
 OUTPUT2=$OUT_DATA_HFILT_STATS
-SCRIPT=~/uab_ngs/annovar/annovar_multianno_filter.pl
+SCRIPT=./uab_ngs/annovar/annovar_multianno_stats_annotate.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -176,9 +184,10 @@ echo "#"
 INPUT=$OUT_DATA_HFILT
 OUTPUT=$OUT_DATA_AAF05
 OUTPUT2=$OUT_DATA_AAF05_STATS
-SCRIPT=~/uab_ngs/annovar/filter_named_column.pl
+SCRIPT=./uab_ngs/annovar/filter_named_column.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT max_aaf \"<=\" 0.05 > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT max_aaf "<=" 0.05 > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -194,9 +203,10 @@ echo "#"
 INPUT=$OUT_DATA_HFILT
 OUTPUT=$OUT_DATA_AAF03
 OUTPUT2=$OUT_DATA_AAF03_STATS
-SCRIPT=~/uab_ngs/annovar/filter_named_column.pl
+SCRIPT=./uab_ngs/annovar/filter_named_column.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT max_aaf \"<=\" 0.03 > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT max_aaf "<=" 0.03 > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -212,9 +222,10 @@ echo "#"
 INPUT=$OUT_DATA_HFILT
 OUTPUT=$OUT_DATA_AAF01
 OUTPUT2=$OUT_DATA_AAF01_STATS
-SCRIPT=~/uab_ngs/annovar/filter_named_column.pl
+SCRIPT=./uab_ngs/annovar/filter_named_column.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT max_aaf \"<=\" 0.01 > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT max_aaf "<=" 0.01 > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -230,9 +241,10 @@ echo "#"
 INPUT=$OUT_DATA_HFILT
 OUTPUT=$OUT_DATA_NOVEL
 OUTPUT2=$OUT_DATA_NOVEL_STATS
-SCRIPT=~/uab_ngs/annovar/filter_named_column.pl
+SCRIPT=./uab_ngs/annovar/filter_named_column.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT is_novel \"eq\" 1 > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT is_novel "eq" 1 > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi

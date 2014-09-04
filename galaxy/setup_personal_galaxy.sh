@@ -20,15 +20,16 @@ module load galaxy/galaxy-developer
 mkdir -p $PROJECT_DIR
 cd $PROJECT_DIR
 
-echo git clone ssh://${USER}@git.uabgrid.uab.edu/home/git/repositories/galaxy.git
-git clone ssh://${USER}@git.uabgrid.uab.edu/home/git/repositories/galaxy.git
+REPO=ssh://${USER}@git.uabgrid.uab.edu/home/git/repositories/galaxy.git
+echo git clone $REPO 
+git clone $REPO
 
 git remote add rollout ssh://galaxy@galaxy.uabgrid.uab.edu/share/apps/galaxy/RollOutRepo/galaxy.git
 
 echo cd $HOME/projects/galaxy/galaxy
 cd $HOME/projects/galaxy/galaxy
 echo git checkout develop
-git checkout develop
+git checkout master
 
 echo "Suggested port: "`grep $USER /etc/passwd | cut -d : -f 3`" (user id for $USER)"
 echo ./personalize.sh 
