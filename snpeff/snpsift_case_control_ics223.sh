@@ -42,7 +42,7 @@ echo `grep -vc "^#" $ANNOVAR_VCF`" variants in $ANNOVAR_VCF"
 echo "***************************************************************"
 echo "generate .tfam files from VCF $IN"
 INPUT=$VCF_IN
-SCRIPT=~/uab_ngs/snpeff/vcf2tped_ics223.sh
+SCRIPT=./uab_ngs/snpeff/vcf2tped_ics223.sh
 OUTPUT=$IN_BASE.sleVnorm.tfam
 if [[ ! -e "$OUTPUT" || "$INPUT" -nt "$OUTPUT" || "$SCRIPT" -nt "$OUTPUT" ]]; then 
     $SCRIPT $INPUT
