@@ -122,7 +122,7 @@ if [[ ! -e "$OUTPUT" || "$INPUT" -nt "$OUTPUT" || "$SCRIPT" -nt "$OUTPUT" ]]; th
     echo "run SnpSift.jar/extractFields"
     CMD="java -jar /share/apps/ngs-ccts/snpEff_3_3/SnpSift.jar extractFields \
 	$OUT_VCF \
-	CHROM POS REF ALT QUAL FILTER AD DP GQ GT PL AC AF AN BaseQRankSum ClippingRankSum DB DP DS FS HaplotypeScore InbreedingCoeff MLEAC MLEAF MQ MQ0 MQRankSum QD ReadPosRankSum $COL_LIST_SUB"
+	CHROM POS ID REF ALT QUAL FILTER AD DP GQ GT PL AC AF AN BaseQRankSum ClippingRankSum DB DP DS FS HaplotypeScore InbreedingCoeff MLEAC MLEAF MQ MQ0 MQRankSum QD ReadPosRankSum $COL_LIST_SUB"
     echo "$CMD | [column name remap] > $OUT_TXT"
     $CMD | \
 	perl -pe 's/((Cases|Controls)_\S+)\[0\]/$1_HOM/g;s/((Cases|Controls)_\S+)\[1\]/$1_HET/g;s/((Cases|Controls)_\S+)\[2\]/$1_TOT/g;' \
