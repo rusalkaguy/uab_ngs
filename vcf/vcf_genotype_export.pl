@@ -11,8 +11,8 @@ my %sample_groups;
 #
 if( $ARGV[0] eq "--groups" ) {
     $cohort_filename = @ARGV[1];
-    pop @ARGV;
-    pop @ARGV;
+    shift @ARGV;
+    shift @ARGV;
 
     open(GRP, "<", $cohort_filename) || die "ERROR: ${cohort_filename}: $!\n";
     my $linenum;
@@ -32,8 +32,8 @@ if( $ARGV[0] eq "--groups" ) {
 my @annovar_variant_gene;
 if( $ARGV[0] eq "--annovar_gene" ) {
     my $annovar_filename = @ARGV[1];
-    pop @ARGV;
-    pop @ARGV;
+    shift @ARGV;
+    shift @ARGV;
 
     open(GNAME, "<", $annovar_filename) || die "ERROR: ${annovar_filename}: $!\n";
     #print STDERR "reading $annovar_filename...\n";
