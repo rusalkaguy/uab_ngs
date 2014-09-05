@@ -25,6 +25,45 @@ if( $ARGV[0] eq "--groups" ) {
     close(GRP);
 }
 
+#
+# parse ANNOVAR output for Gene.refGene (WARNING: stores array in memory!)
+# please use SnpEff instead!
+#
+my @annovar_variant_gene;
+if( $ARGV[0] eq "--annovar_gene" ) {
+    my $annovar_filename = @ARGV[1];
+    pop @ARGV;
+    pop @ARGV;
+
+    open(GNAME, "<", $annovar_filename) || die "ERROR: ${annovar_filename}: $!\n";
+    #print STDERR "reading $annovar_filename...\n";
+    my $annovar_linenum;
+    my $annovar_variant_num; 
+    my $col_index; # for Gene.refGene
+    while(<GNAME>) {
+	$annovar_linenum++;
+	next if( $_ =~ m/^\#\#/ ); # skip comments; 
+	if( $_ =~ m/^#CHROM/ ) {
+	    my @col_names = split(/[\t\n]/,$_);
+	    # get index for our column name: http://www.perlmonks.org/?node_id=75660
+	    # print STDERR "\t",$_,"=>",$col_names[$_],"\n";
+	    my @gr = grep { $col_names[$_] =~ m/Gene.refGene/i } 0..$#col_names;
+	    $col_index = $gr[0];
+	    #print STDERR "\tcol_index=$col_index\n";
+	    next;
+	}
+	my @var_cols = split(/[\t\n]/,$_);
+	$annovar_variant_num++;
+	my $gene_name = $var_cols[$col_index];
+	# clean up 
+	$gene_name =~ s/[\(;].*//;  
+	$annovar_variant_gene[$annovar_variant_num] = $gene_name;
+	#if( $annovar_variant_num < 10 ) {print STDERR "\t annovar[$annovar_variant_num] $var_cols[0] $var_cols[1] $var_cols[$col_index] (idx=$col_index)\n";}
+    
+    }
+    close(GNAME);
+}
+
 my $vcf_filename="STDIN";
 my $first_format; # format for first observed variant
 my %formats;  # hash of format abbreviations
@@ -34,10 +73,11 @@ my @chrom; # hash of #CHROM line (sample list)
 
  
 # output header, part1
-print join("\t","#CHROM", "start", "pos","id","score","qc","sample","group");
+print join("\t","#CHROM", "start", "pos","id","score","qc","gene","sample","group");
 
 # parse input VCF
 my $linenum=0;
+my $varnum=0;
 while (my $line=<> ) {
     $linenum++;
     if( $linenum == 1 && $line !~ m/^##fileformat=VCFv4/ ) {
@@ -67,6 +107,7 @@ while (my $line=<> ) {
     }
 
     # PARSE variants
+    $varnum++;
     my @variant = split(m/[\t\n]/, $line);
     my $v_chr =$variant[0];
     my $v_start =$variant[1];
@@ -76,6 +117,7 @@ while (my $line=<> ) {
     my @alleles=($v_ref, split(",",$variant[4]));
     my $v_score =$variant[5];
     my $v_qc =$variant[6];
+    my $v_gene = $annovar_variant_gene[$varnum];
     my $v_info=$variant[7]; 
     my $v_format=$variant[8];
 
@@ -137,6 +179,7 @@ while (my $line=<> ) {
 		   $v_id,
 		   $v_score,
 		   $v_qc,
+		   $v_gene,
 		   #@alleles, # debugging
 		   # sample info
 		   $chrom[$i],
