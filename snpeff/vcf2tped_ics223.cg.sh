@@ -38,11 +38,29 @@ fi
 echo "PHENO_CODING=$PHENO_CODING"; 
 if [[ -z "$PHENO_CODING" || ! -e "$PHENO_CODING" ]]; then echo "!!MISSING!!"; exit 1; fi
 PHENO_DEF=`grep "^##PHENO_DEF=" $PHENO_CODING | perl -pe 's/.*=([^ \t#]+).*/$1/;'`
-echo "PHENO_DEF=$PHENO_DEF"; if [ ! -e $PHENO_DEF ]; then echo "!!MISSING!!"; exit 1; fi
-if [[ -z "$PHENO_DEF" || ! -e "$PHENO_DEF" ]]; then echo "!!MISSING!!"; exit 1; fi
+if [ -z "$PHENO_DEF"  ]; then echo "PHENO_DEF= [ERROR: MISSING value]"; exit 1; fi
+if [  ! -e "$PHENO_DEF" ]; then 
+    echo "PHENO_DEF=$PHENO_DEF [ERROR: file not found]"
+    PHENO_DEF=`dirname $PHENO_CODING`/$PHENO_DEF;
+    if [ ! -e "$PHENO_DEF" ]; then 
+	echo "PHENO_DEF=$PHENO_DEF [ERROR: file not found]"
+	exit 1;
+    fi
+fi
+echo "PHENO_DEF=$PHENO_DEF"
+
 SAMPLE_DEF=`grep "^##SAMPLE_DEF=" $PHENO_DEF | perl -pe 's/.*=([^ \t#]+).*/$1/;'`
 echo "SAMPLE_DEF=$SAMPLE_DEF"; 
-if [[ -z "$SAMPLE_DEF" || ! -e "$SAMPLE_DEF" ]]; then echo "!!MISSING!!"; exit 1; fi
+if [[ -z "$SAMPLE_DEF"  ]]; then echo "SAMPLE_DEF=[ERROR: value missing]"; exit 1; fi
+if [  ! -e "$SAMPLE_DEF" ]; then 
+    echo "SAMPLE_DEF=$SAMPLE_DEF [ERROR: file not found]"
+    SAMPLE_DEF=`dirname $PHENO_CODING`/$SAMPLE_DEF;
+    if [ ! -e "$SAMPLE_DEF" ]; then 
+	echo "SAMPLE_DEF=$SAMPLE_DEF [ERROR: file not found]"
+	exit 1;
+    fi
+fi
+echo "SAMPLE_DEF=$SAMPLE_DEF"
 
 # get sample list
 if [ `grep -c "^#CHROM" $IN` != 1 ]; then

@@ -6,8 +6,10 @@
 # 2. SNPSift (case/control count/pvalue)
 #
 #
-VCF_IN=$1
-ABBREV_IN=$2
+VCF_IN=$1         ;if [ ! -e "$VCF_IN" ]; then "ERROR: MISSING FILE: VCF_IN=$VCF_IN"; fi
+ABBREV_IN=$2      ;if [ -z "$ABBREV_IN" ]; then "ERROR: MISSING ABBREV: ABBREV_IN=$ABBREV_IN"; fi
+PHENO_CODING=$3   ;if [ ! -e "$PHENO_CODING" ]; then "ERROR: MISSING FILE: PHENO_CODING=$PHENO_CODING"; fi
+
 echo `# CMD: basename $0`" $*"
 
 DIR_BASENAME=vcf4old.inc.com/`basename $VCF_IN .vcf`
@@ -17,7 +19,6 @@ FULL_MULTIANNO_TXT=${DIR_BASENAME}.full.hg19_multianno.txt
 MULTIANNO_TXT=${FILTERED_AVINPUT}.hg19_multianno.txt  
 
 CASECONTROL_VCF=`basename $VCF_IN .vcf`.caseControl.vcf
-CASECONTROL_SORT_VCF=`basename $VCF_IN .vcf`.caseControl.sort.vcf
 CASECONTROL_TXT=`basename $VCF_IN .vcf`.caseControl.txt
 OUT_FIELDS=`basename $VCF_IN .vcf`.caseControl.annovar.fields.txt
 OUT_DATA=`basename $VCF_IN .vcf`.caseControl.annovar.data.txt
@@ -33,8 +34,8 @@ OUT_DATA_AAF01_STATS=`basename $OUT_DATA_AAF01 .txt`.stats
 OUT_DATA_NOVEL=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.filt.aaf00.txt
 OUT_DATA_NOVEL_STATS=`basename $OUT_DATA_NOVEL .txt`.stats
 
-if [[ -z "$VCF_IN" || ! -e "$VCF_IN" || -z $ABBREV_IN ]]; then
-    echo "USAGE: "`basename $0`" input.VCF abbrev"
+if [[ -z "$VCF_IN" || ! -e "$VCF_IN" || -z "$ABBREV_IN" || ! -e "$PHENO_CODING" ]]; then
+    echo "USAGE: "`basename $0`" input.VCF abbrev cohort_pheno_coding.txt"
     exit 1
 fi
 
@@ -46,6 +47,7 @@ OUTPUT=$AVINPUT
 SCRIPT=./uab_ngs/annovar/convert2annovar.vcf4old.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "$SCRIPT $VCF_IN $AVINPUT"
     $SCRIPT $VCF_IN $AVINPUT
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -77,6 +79,7 @@ OUTPUT=$MULTIANNO_TXT
 SCRIPT=./uab_ngs/annovar/doit.table_annovar.sh
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "$SCRIPT $INPUT $OUTPUT"
     $SCRIPT $INPUT $OUTPUT
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
@@ -101,32 +104,19 @@ echo "#"
 echo "# SnpSift - compute variant counts/cohort & p-values"
 echo "#"
 INPUT=$AVINPUT
+INPUT2=$PHENO_CODING
 OUTPUT=$CASECONTROL_VCF
 OUTPUT2=$CASECONTROL_TXT
-SCRIPT=./uab_ngs/snpeff/snpsift_case_control_ics223.sh
-if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
+SCRIPT=./uab_ngs/snpeff/snpsift_case_control_ics223.cg.sh
+if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" && "$OUTPUT" -nt "$INPUT2" ]]; then echo "SKIP"; else
     date
-    $SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT
+    echo "$SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT $PHENO_CODING"
+    $SCRIPT $INPUT $ABBREV_IN $FILTERED_AVINPUT $PHENO_CODING
     RC=$?; date
     if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
 fi
 echo "# OUTPUT=$OUTPUT"
 echo "# OUTPUT2=$OUTPUT2"
-echo ""
-
-echo "#"
-echo "# Sort extracted VCF "
-echo "#"
-INPUT=$CASECONTROL_VCF
-OUTPUT=$CASECONTROL_SORT_VCF
-SCRIPT=./uab_ngs/linux_plus/sort_chr_pos.sh
-if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
-    date
-    $SCRIPT $INPUT > $OUTPUT
-    RC=$?; date
-    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
-fi
-echo "# OUTPUT=$OUTPUT"
 echo ""
 
 echo "#"
@@ -165,14 +155,15 @@ echo ""
 
 echo ""
 echo "#"
-echo "# ANNOVAR: hand-filter annotated variants"
+echo "# ANNOVAR: count variant types/classes, add is_novel, max_aaf columns"
 echo "#"
 INPUT=$OUT_DATA_COLCLEAN
 OUTPUT=$OUT_DATA_HFILT
 OUTPUT2=$OUT_DATA_HFILT_STATS
-SCRIPT=./uab_ngs/annovar/annovar_multianno_filter.pl
+SCRIPT=./uab_ngs/annovar/annovar_multianno_stats_annotate.pl
 if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT" ]]; then echo "SKIP"; else
     date
+    echo "cat $INPUT | $SCRIPT > $OUTPUT 2> $OUTPUT2"
     cat $INPUT | $SCRIPT > $OUTPUT 2> $OUTPUT2
     RC=$?; date
     cat $OUTPUT2
@@ -254,7 +245,7 @@ echo ""
 echo "#"
 echo "# FINAL OUTPUT"
 echo "#"
-grep -vc "^#" \
+egrep -vc "(^#|^Chr)" \
     $VCF_IN $FILTERED_AVINPUT \
     $CASECONTROL_TXT \
     $CASECONTROL_SORT_VCF \

@@ -5,8 +5,6 @@ VCF_IN="$1"        # $PWD/hc_pad200_hg19.vcf
 NAME="$2"          # HC200
 ANNOVAR_IN="$3"    # vcf4old.inc.com/hc_pad200_hg19.reduce.step4.varlist
 PHENO_CODING="$4"  # cohort_pheno_compare_coding.wustl.cg.txt
-# NOTE: SAMPLE_DEF, PHENO_DEF and PHENO_CODING should all be linked, rather than specified explicitly. 
-# likely PHENO_CODING should point to PHENO_DEF, which should point to SAMPLE_DEF
 if [[ -z "$4" ]]; then
     echo "ERROR: syntax $0 VCF_IN ABBREV ANNOVAR_IN PHENO_DEF"
     exit 1;
@@ -30,7 +28,7 @@ echo 'to clean dir: rm *.*.vcf *.tfam */*.vcf '$OUT_TXT $OUT_VCF
 echo "***************************************************************"
 echo "# extract subset VCF from ANNOVAR REDUCEd list"
 ANNOVAR_VCF=${ANNOVAR_IN}.vcf
-if [ ! -e $ANNOVAR_VCF ]; then 
+if [[ ! -e $ANNOVAR_VCF || "$ANNOVAR_IN" -nt "$ANNOVAR_VCF" || "$0" -nt "$ANNOVAR_VCF" ]]; then 
     echo "grep ^# $VCF_IN > $ANNOVAR_VCF"
     grep "^#" $VCF_IN > $ANNOVAR_VCF
     RC=$?; if [ $RC != 0 ]; then echo "ERROR: RC=$RC"; exit $RC; fi
@@ -46,9 +44,13 @@ echo `grep -vc "^#" $ANNOVAR_VCF`" variants in $ANNOVAR_VCF"
 
 echo "***************************************************************"
 echo "generate .tfam files from VCF $IN"
-if [ ! -e $IN_BASE.sleVnorm.tfam ]; then 
-    echo "./uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING"
-    ./uab_ngs/snpeff/vcf2tped_ics223.cg.sh $VCF_IN $PHENO_CODING
+INPUT=$VCF_IN
+INPUT2=$PHENO_CODING
+SCRIPT=./uab_ngs/snpeff/vcf2tped_ics223.cg.sh
+OUTPUT=$IN_BASE.sleVnorm.tfam
+if [[ ! -e "$OUTPUT" || "$INPUT" -nt "$OUTPUT" || "$INPUT2" -nt "$OUTPUT" || "$SCRIPT" -nt "$OUTPUT" ]]; then 
+    echo "$SCRIPT $INPUT $INPUT2"
+    $SCRIPT $INPUT $INPUT2
     RC=$?; if [ $RC != 0 ]; then echo "ERROR: RC=$RC"; exit $RC; fi
 else
     echo SKIP
@@ -97,7 +99,10 @@ echo "***************************************************************"
 echo "Excel Extract" #**************************************************
 
 echo "Creating $OUT_TXT"
-if [ ! -e $OUT_TXT ]; then 
+INPUT=$OUT_VCF
+SCRIPT=$0
+OUTPUT=$OUT_TXT
+if [[ ! -e "$OUTPUT" || "$INPUT" -nt "$OUTPUT" || "$SCRIPT" -nt "$OUTPUT" ]]; then 
 
     # extract field list
     echo "Extract field list"
@@ -121,7 +126,7 @@ if [ ! -e $OUT_TXT ]; then
     echo "run SnpSift.jar/extractFields"
     CMD="java -jar /share/apps/ngs-ccts/snpEff_3_3/SnpSift.jar extractFields \
 	$OUT_VCF \
-	CHROM POS REF ALT QUAL FILTER AD DP GQ GT PL AC AF AN BaseQRankSum ClippingRankSum DB DP DS FS HaplotypeScore InbreedingCoeff MLEAC MLEAF MQ MQ0 MQRankSum QD ReadPosRankSum $COL_LIST_SUB"
+	CHROM POS ID REF ALT QUAL FILTER AD DP GQ GT PL AC AF AN BaseQRankSum ClippingRankSum DB DP DS FS HaplotypeScore InbreedingCoeff MLEAC MLEAF MQ MQ0 MQRankSum QD ReadPosRankSum $COL_LIST_SUB"
     echo "$CMD | [column name remap] > $OUT_TXT"
     $CMD | \
 	perl -pe 's/((Cases|Controls)_\S+)\[0\]/$1_HOM/g;s/((Cases|Controls)_\S+)\[1\]/$1_HET/g;s/((Cases|Controls)_\S+)\[2\]/$1_TOT/g;' \
