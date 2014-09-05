@@ -28,10 +28,10 @@ fi
 for X in $FILES; do 
     if [ ! -e $X.tbi ]; then echo "ERROR: missing: $X.tbi" >2; exit 1; fi
     
-    FNAME=`basename $X .vcf.gz`
-    NAME=`grep -w "^$FNAME" name_map.txt | cut -f 2`
+    FNAME=`basename $X`
+    NAME=`egrep "^$FNAME	" name_map.txt | cut -f 2`
     if [ -z "$NAME" ]; then NAME=`basename $X .vcf.gz|cut -d . -f 4-`; fi
-    COLOR=`grep -w "^$FNAME" name_map.txt | cut -f 3`
+    COLOR=`egrep "^$FNAME	" name_map.txt | cut -f 3`
     if [ -z "$COLOR" ]; then COLOR="0,0,0"; fi
 
     echo -n "track "
