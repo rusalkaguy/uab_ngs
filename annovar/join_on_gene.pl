@@ -7,7 +7,7 @@ use Data::Dumper;
 Data::Dumper::Terse(1);
 
 my %genes; #=>  { name, chr, min, max, values => { filename=>{line,value} }
-my @header = ("#CHROM","start","end","gene");
+my @header = ("#CHROM","start","end","gene%accession");
 my $missing = 0;
 
 # zero-based column indices
