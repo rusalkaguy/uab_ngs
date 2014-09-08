@@ -20,6 +20,7 @@ MULTIANNO_TXT=${FILTERED_AVINPUT}.hg19_multianno.txt
 
 CASECONTROL_VCF=`basename $VCF_IN .vcf`.caseControl.vcf
 CASECONTROL_TXT=`basename $VCF_IN .vcf`.caseControl.txt
+CASECONTROL_SORT_VCF=`basename $VCF_IN .vcf`.caseControl.sort.vcf
 OUT_FIELDS=`basename $VCF_IN .vcf`.caseControl.annovar.fields.txt
 OUT_DATA=`basename $VCF_IN .vcf`.caseControl.annovar.data.txt
 OUT_DATA_COLCLEAN=`basename $VCF_IN .vcf`.caseControl.annovar.data.cols.txt
@@ -118,6 +119,26 @@ fi
 echo "# OUTPUT=$OUTPUT"
 echo "# OUTPUT2=$OUTPUT2"
 echo ""
+
+
+echo "#"
+echo "# sort VCF for use with tabix"
+echo "#"
+INPUT=$CASECONTROL_VCF
+OUTPUT=$CASECONTROL_SORT_VCF
+SCRIPT=./uab_ngs/linux_plus/sort_chr_pos.sh
+if [[ -e "$OUTPUT" && "$OUTPUT" -nt "$SCRIPT" && "$OUTPUT" -nt "$INPUT"  ]]; then echo "SKIP"; else
+    date
+    echo "$SCRIPT $INPUT > $OUTPUT"
+    $SCRIPT $INPUT > $OUTPUT
+    RC=$?; date
+    if [ $RC != 0 ]; then echo "FAILED: RC=$RC"; exit $RC; fi
+fi
+echo "# OUTPUT="`grep -cv "^#" $OUTPUT`
+echo ""
+
+
+
 
 echo "#"
 echo "# Merge outputs"
