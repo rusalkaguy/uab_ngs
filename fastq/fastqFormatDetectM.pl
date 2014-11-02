@@ -68,16 +68,20 @@ foreach my $fq (@ARGV) {
     my @line;
     my $l;
     my $number;
+    my $line_num = 0;
 
 
 FILE: 
     # go thorugh the file
     while(<FQ>){
+	$line_num++;
 
 	# if it is the line before the quality line
 	if($_ =~ /^\+/){
 
-	    $l = <FQ>;		# get the quality line
+	    $l = <FQ>;$line_num++;  # get the quality line
+	    chomp($l);
+
 	    @line = split(//,$l); # divide in chars
 	    for(my $i = 0; $i <= $#line; $i++){	# for each char
 		$number = ord($line[$i]); # get the number represented by the ascii char
@@ -88,7 +92,7 @@ FILE:
 		    if( $quiet ) {
 			print "64\n";
 		    } else {
-			print "$fq\t64\tIllumina 1.3+/Solexa (Phred/Solexa+64)\n";
+			print "$fq:${line_num}\t[",$i+1,"]=$number\t64\tIllumina 1.3+/Solexa (Phred/Solexa+64)\n";
 		    }
 		    last FILE;
 		}elsif($number < 59){ # if sanger
@@ -96,7 +100,7 @@ FILE:
 		    if( $quiet ) {
 			print "32\n";
 		    } else {
-			print "$fq\t32\tSanger/Illumina 1.8+ (Phred+33)\n";
+			print "${fq}:${line_num}\t[",$i+1,"]=$number\t32\tSanger/Illumina 1.8+ (Phred+33)\n";
 		    }
 		    last FILE;
 		}
