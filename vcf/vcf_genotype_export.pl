@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 #
 # 
+# 2015-01-05 add max_aaf, is_novel, variant_func fields to extract
 use strict;
 
 my $cohort_filename;
@@ -29,6 +30,7 @@ if( $ARGV[0] eq "--groups" ) {
 # parse ANNOVAR output for Gene.refGene (WARNING: stores array in memory!)
 # please use SnpEff instead!
 #
+my @var_col_names = ( 'Gene.refGene', 'max_aaf', 'is_novel', 'Func.refGene', 'ExonicFunc.refGene' ) ;
 my @annovar_variant_gene;
 if( $ARGV[0] eq "--annovar_gene" ) {
     my $annovar_filename = @ARGV[1];
@@ -39,27 +41,40 @@ if( $ARGV[0] eq "--annovar_gene" ) {
     #print STDERR "reading $annovar_filename...\n";
     my $annovar_linenum;
     my $annovar_variant_num; 
-    my $col_index; # for Gene.refGene
+    my %cidx;
+    foreach my $col_name ( @var_col_names ) {
+	$cidx{$col_name} = { name=> $col_name };
+    }
     while(<GNAME>) {
 	$annovar_linenum++;
 	next if( $_ =~ m/^\#\#/ ); # skip comments; 
 	if( $_ =~ m/^#CHROM/ ) {
 	    my @col_names = split(/[\t\n]/,$_);
-	    # get index for our column name: http://www.perlmonks.org/?node_id=75660
+	    # get index for our column names: http://www.perlmonks.org/?node_id=75660
 	    # print STDERR "\t",$_,"=>",$col_names[$_],"\n";
-	    my @gr = grep { $col_names[$_] =~ m/Gene.refGene/i } 0..$#col_names;
-	    $col_index = $gr[0];
-	    #print STDERR "\tcol_index=$col_index\n";
+	    for my $col_name ( keys %cidx ) {
+		my @gr = grep { $col_names[$_] =~ m/$col_name/i } 0..$#col_names;
+		$cidx{$col_name}->{index} = $gr[0];
+		print STDERR "\tcidx[$col_name]=$cidx{$col_name}->{index}\n";
+	    }
 	    next;
 	}
 	my @var_cols = split(/[\t\n]/,$_);
 	$annovar_variant_num++;
-	my $gene_name = $var_cols[$col_index];
+	$annovar_variant_gene[$annovar_variant_num] = {};
+	for my $col_name ( keys %cidx ) {
+	    $annovar_variant_gene[$annovar_variant_num]->{$col_name} = 
+		$var_cols[$cidx{$col_name}->{index}];
+	}
 	# clean up 
-	$gene_name =~ s/[\(;].*//;  
-	$annovar_variant_gene[$annovar_variant_num] = $gene_name;
-	#if( $annovar_variant_num < 10 ) {print STDERR "\t annovar[$annovar_variant_num] $var_cols[0] $var_cols[1] $var_cols[$col_index] (idx=$col_index)\n";}
-    
+	$annovar_variant_gene[$annovar_variant_num]->{'Gene.refGene'} =~ s/[\(;].*//;  
+	if( $annovar_variant_num < 10 ) {
+	    print STDERR "\t annovar[$annovar_variant_num] $var_cols[0] $var_cols[1] ";
+	    foreach my $col_name ( @var_col_names ) {
+		print STDERR "$col_name=" . $annovar_variant_gene[$annovar_variant_num]->{$col_name}.", ";
+	    }
+	    print STDERR "\n";
+	}
     }
     close(GNAME);
 }
@@ -117,7 +132,7 @@ while (my $line=<> ) {
     my @alleles=($v_ref, split(",",$variant[4]));
     my $v_score =$variant[5];
     my $v_qc =$variant[6];
-    my $v_gene = $annovar_variant_gene[$varnum];
+    my $v_gene = $annovar_variant_gene[$varnum]->{'Gene.refGene'};
     my $v_info=$variant[7]; 
     my $v_format=$variant[8];
 
@@ -131,7 +146,12 @@ while (my $line=<> ) {
     } elsif(!$first_format) {
 	$first_format=$v_format;
 	# header, part2
-	print "\t",join("\t","GTclass", "GTsubclass", split(":",$v_format)), "\n";
+	print "\t",join("\t","GTclass", "GTsubclass", 
+			# format headers
+			split(":",$v_format), 
+			# selected names columns
+			@var_col_names[1..scalar(@var_col_names)],
+			), "\n";
     }
     
 
@@ -169,7 +189,6 @@ while (my $line=<> ) {
 	# replace index based GT
 	$s_info[0] = $genotype;
 
-
 	print join("\t", 
 		   #"[${linenum}:$i]",
 		   # include these for TABIX indexing
@@ -189,7 +208,15 @@ while (my $line=<> ) {
 		   #$genotype,
 		   $genoclass,
 		   $genosubclass,
+		   # variable info columns from VCF
 		   @s_info,
+		   # variable named columns from ANNOVAR - skipping first one  
+		   #@annovar_variant_gene[$varnum]->{@var_col_names[1..scalar(@var_col_names)]},
+		   $annovar_variant_gene[$varnum]->{'max_aaf'},
+		   $annovar_variant_gene[$varnum]->{'is_novel'},
+		   $annovar_variant_gene[$varnum]->{'Func.refGene'},
+		   $annovar_variant_gene[$varnum]->{'ExonicFunc.refGene'},
+		   #@annovar_variant_gene[$varnum]->{'Func.refGene','ExonicFunc.refGene'}, # fails!?!?
 		   ),
 	"\n";
     }
