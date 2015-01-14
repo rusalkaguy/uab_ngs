@@ -1,0 +1,5 @@
+#!/bin/bash
+# summary CPU slots available/used for each queue on the cluster
+qstat -g c
+exit $?
+
