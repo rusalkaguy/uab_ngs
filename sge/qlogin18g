@@ -1,0 +1,3 @@
+#!/bin/bash
+# one varari node
+exec qlogin -l h_rt=06:00:00,vf=18G $*
