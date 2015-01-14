@@ -16,7 +16,7 @@ if [ "$1" == "-j" ]; then
     JOB_ID_LIST="$*"
 else
     # query for list and extract job id
-     JOB_ID_LIST=`qstat $* | cut -d  " " -f 1 | grep -v "-" `
+     JOB_ID_LIST=`qstat $* | awk '($1 ~ "^[0-9]+$"){print $1}'`
 fi
 
 # for each job
