@@ -3,6 +3,10 @@
 # qstat_full_job_names [-q] [qstat parameters]
 #
 # 
+# temp file cleanup
+TFILE=`mktemp`
+trap 'rm -rf $TFILE' EXIT # delete on exit
+ 
 # list full jobs names for all specified jobs
 # and various other stats in tab-column format 
 ATTR_LIST="job_name hard usage parallel.environment"
@@ -23,7 +27,6 @@ fi
 for j in $JOB_ID_LIST; do 
     echo -n "$j	"
     # get job details
-    TFILE=`mktemp`
     qstat -j $j > $TFILE
     # get requested attributes for that job
     for str in $ATTR_LIST; do

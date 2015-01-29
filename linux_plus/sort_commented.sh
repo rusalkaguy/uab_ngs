@@ -22,7 +22,7 @@ STDIN=
 for SRC in $SRCS; do
     if [ "$SRC" == "-" ]; then
 	if [ -z "$STDIN" ]; then
-	    STDIN=`mktemp`
+	    STDIN=`mktemp`; trap 'rm -rf $STDIN' EXIT
 	    cat - > $STDIN
 	fi
 	SAFE_SRCS+="$STDIN "
