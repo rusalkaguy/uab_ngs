@@ -31,7 +31,7 @@ for CUR in $FILELIST; do
     #echo "PREV=$PREV"
     if [ -z "$PREV" ]; then 
 	PREV=`mktemp`
-	cut -f $COLS $CUR > $PREV
+	cut -f $COLS $CUR | sort > $PREV
 	echo "first file $CUR"
 	continue
     fi
@@ -41,7 +41,7 @@ for CUR in $FILELIST; do
     #
     join -j 1 \
 	$PREV \
-	<(cut -f $COLS $CUR) \
+	<(cut -f $COLS $CUR | sort) \
 	> $OUT
     echo "merged "`wc -l $CUR`
     #echo "merged $PREV and $CUR -> $OUT" # too many details
