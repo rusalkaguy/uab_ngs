@@ -12,6 +12,11 @@
 # arguments: list of files to join
 FILELIST=$*
 echo FILELIST=$FILELIST
+# handle temp file cleanup 
+# http://stackoverflow.com/questions/687014/removing-created-temp-files-in-unexpected-bash-exit
+export MY_TEMP_DIR=`mktemp -d` # establish dir for all our tmp files
+trap 'rm -rf $MY_TEMP_DIR' EXIT  # auto-delete all temp files
+
 # output destination
 FINAL=final.txt
 # key and data column indicies for input files
@@ -22,7 +27,7 @@ PREV=
 # iterate over all files
 for CUR in $FILELIST; do 
     # create auto-delete temp file for intermediate result
-    OUT=`mktemp` 
+    OUT=`TMPDIR="" mktemp -p $MY_TEMP_DIR` 
     
     # 
     # on first time through, just strip columns
@@ -30,8 +35,8 @@ for CUR in $FILELIST; do
     #
     #echo "PREV=$PREV"
     if [ -z "$PREV" ]; then 
-	PREV=`mktemp`
-	cut -f $COLS $CUR | sort > $PREV
+	cut -f $COLS $CUR | sort > $OUT
+	PREV=$OUT
 	echo "first file $CUR"
 	continue
     fi
@@ -49,6 +54,7 @@ for CUR in $FILELIST; do
     #grep . $OUT 
 
     # shift current intersection to be the PREV file in next merge
+    rm $PREV # cleanup temp files we're done with
     PREV=$OUT
 done
 
@@ -57,5 +63,6 @@ HEADERS="ID $*"
 
 # pre-pend headers to result
 (echo $HEADERS; cat $OUT) > $FINAL
+rm $OUT
 echo "output in $FINAL"
 wc -l $FINAL
