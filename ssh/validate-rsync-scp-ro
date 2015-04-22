@@ -1,0 +1,68 @@
+#!/bin/sh 
+# validate-rsync-scp-ro
+# Allow only 
+#	RSYNC --sender FROM $1
+# or 	SCP [-r] -f FROM $!
+# 
+# HISTORY
+# validate-rsync FROM http://troy.jdmz.net/rsync/index.html
+# MODIFIED 2013-05-23 by Curtish@uab.edu to 
+#   allow only--sender for RSYNC
+#   allow SCP [-r] -f
+#   enforce optional directory restriction to $1
+#
+#
+# if no $1 is given, no directory restrictions are applied.
+#
+LOG=$0.log
+REJECT="Rejected: rsync --sender OR scp -f ONLY"
+echo -n "$SSH_ORIGINAL_COMMAND	" >> $LOG
+
+# log access
+case "$SSH_ORIGINAL_COMMAND" in 
+*\&*) 
+echo "Rejected - rsync only" | tee -a $LOG
+;; 
+*\(*) 
+echo "$REJECT" | tee -a $LOG
+;; 
+*\{*) 
+echo "$REJECT" | tee -a $LOG
+;; 
+*\;*) 
+echo "$REJECT" | tee -a $LOG
+;; 
+*\<*) 
+echo "$REJECT" | tee -a $LOG
+;; 
+*\`*) 
+echo "$REJECT" | tee -a $LOG
+;; 
+*\|*) 
+echo "$REJECT" | tee -a $LOG
+;; 
+*..*) 
+echo "$REJECT" | tee -a $LOG
+;; 
+rsync\ --server\ --sender*) 
+if [[ -n "$1" && $SSH_ORIGINAL_COMMAND != *.\ $1* ]]; then
+	echo "$REJECT; only files below $1" | tee -a $LOG
+	exit
+fi
+# OK: let the rsync server run!
+echo "OK" >> $LOG
+$SSH_ORIGINAL_COMMAND 
+;; 
+scp\ *-f\ *) 
+if [[ -n "$1" && $SSH_ORIGINAL_COMMAND != *-f\ $1* ]]; then
+	echo "$REJECT;  only files below $1" | tee -a $LOG
+	exit
+fi
+# OK: let the rsync server run!
+echo "OK" >> $LOG
+$SSH_ORIGINAL_COMMAND 
+;; 
+*) 
+echo "$REJECT" | tee -a $LOG
+;; 
+esac 
