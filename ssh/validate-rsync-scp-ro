@@ -6,7 +6,7 @@
 # 
 # HISTORY
 # validate-rsync FROM http://troy.jdmz.net/rsync/index.html
-# MODIFIED 2013-05-23 by Curtish@uab.edu to 
+# MODIFIED 2013-05-23 by https://github.com/rusalkaguy
 #   allow only--sender for RSYNC
 #   allow SCP [-r] -f
 #   enforce optional directory restriction to $1
