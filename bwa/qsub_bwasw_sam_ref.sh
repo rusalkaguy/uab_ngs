@@ -11,7 +11,7 @@
 module load  galaxy/galaxy-command-line # bcftools & samtools (0.1.12a (r862))
 #module load  ngs-ccts/samtools-0.1.19
 if [ -z "$BWA" ]; then export BWA="/share/apps/ngs-ccts/bwa-0.6.2/bwa"; fi
-if [ -z "$PICARD_DIR" ]; then export PICARD=/share/apps/ngs-ccts/picard-tools/picard-tools-1.110/picard-1.110.jar; fi
+if [ -z "$PICARD_JAR" ]; then export PICARD_JAR=/share/apps/ngs-ccts/picard-tools/picard-tools-1.110/CollectInsertSizeMetrics.jar; fi
 
 #*** QSUB FLAGS ***
 #
@@ -254,14 +254,14 @@ if [ -n "$JOB_ID"  ]; then
 
     # Flagstat of alignment
     FLAGSTAT_OUT=${BAM_OUT}.flagstat
-    run_step $SAMPLE_NAME $FLAGSTAT_OUT SAMTOOLS_flagstat $FLAGSTAT_OUT \
+    run_step "$SAMPLE_NAME" "$FLAGSTAT_OUT" SAMTOOLS_flagstat "$FLAGSTAT_OUT" \
 	samtools flagstat $BAM_OUT
 
     # Flagstat of alignment
     FRAGSIZE_OUT=${BAM_OUT}.fragstat
     FRAGSIZE_HIST=${BAM_OUT}.fragstat_hist
-    run_step $SAMPLE_NAME $FLAGSTAT_HIST PICARD_CollectInsertSizeMetrics $FLAGSTAT_OUT \
-	java -Xmx5500m $PICARD_JAR \
+    run_step "$SAMPLE_NAME" "$FLAGSTAT_HIST" PICARD_CollectInsertSizeMetrics "$FLAGSTAT_OUT" \
+	java -Xmx5500m -jar $PICARD_JAR \
 	INPUT=$BAM_OUT \
 	OUTPUT=$FRAGSIZE_OUT \
 	HISTOGRAM_FILE=$FRAGSIZE_HIST
