@@ -48,7 +48,8 @@ fi
 # 
 OUT_SUFFIX=fasta
 INPUT_FLAGS=
-if [[ "$IN_FASTA" == *.fastq* || "$IF_FASTA" == *.fq* ]]; then INPUT_FLAGS="$INPUT_FLAGS --fastq-input"; OUT_SUFFIX="fastq"; fi
+# .dat  is a hack for dealing with Galaxy files
+if [[ "$IN_FASTA" == *.fastq* || "$IN_FASTA" == *.fq* || "$IN_FASTA" == *.dat ]]; then INPUT_FLAGS="$INPUT_FLAGS --fastq-input"; OUT_SUFFIX="fastq"; fi
 if [[ "$IN_FASTA" == *.gz ]]; then INPUT_FLAGS="$INPUT_FLAGS --gzip-compressed"; fi
 
 
