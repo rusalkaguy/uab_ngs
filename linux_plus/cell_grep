@@ -1,0 +1,39 @@
+#!/bin/bash
+
+exit_syntax () {
+	echo "ERROR: $1"
+	echo "SYNTAX: $0 [-nH] [-d sep] regex filename [filenames..]"
+	echo "	-n print row/col numbers [default: no]"
+	echo "	-H always print filename [default: if >1 file]"
+	echo "	-d column separator [default: tab]"
+	echo ""
+	echo "Prints cells matching a given regex pattern from a delimited file."
+	exit 1
+}
+
+# parse flags
+PRINT_NUM=0
+PRINT_FILE=0
+SEP="	"
+while [[ "$1" == -* ]]; do 
+
+	if [[ "-d" == "$1" ]]; then SEP="$2"; shift 2; continue; fi
+	if [[ "-n" == "$1" ]]; then PRINT_NUM=1; shift; continue; fi
+	if [[ "-H" == "$1" ]]; then PRINT_FILE=1; shift; continue; fi
+	exit_syntax "$1"
+done
+
+REGEX=$1
+shift
+if [[ -z "$REGEX" ]]; then exit_syntax "no regex specified"; fi
+
+FILE_LIST="$*"
+if [[ ! -z "$2" ]]; then PRINT_FILE=1; fi
+if [[ -z "$FILE_LIST" ]]; then FILE_LIST="-"; fi
+
+# do the actual work
+exec awk -F "$SEP" -v PRINT_NUM=$PRINT_NUM -v PRINT_FILE=$PRINT_FILE  -v REGEX=$REGEX \
+        'BEGIN{OFS=FS}($0 ~ REGEX){for(i=1;i<=NF;i++){if($i ~ REGEX){if(1==PRINT_FILE){printf FILENAME OFS};if(1==PRINT_NUM){printf FNR OFS i OFS}; print $i}}}' \
+	$FILE_LIST
+
+
