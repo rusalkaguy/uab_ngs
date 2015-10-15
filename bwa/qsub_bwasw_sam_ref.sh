@@ -1,15 +1,15 @@
-#!/bin/sh 
+#!/bin/sh
 ########################################################################
 #
 # BWA SW contigs vs an un-indexed FASTA genome
-# 
+#
 ########################################################################
 # libraries to load
 . /etc/profile.d/modules.sh          # enable module loading
 . ~/uab_ngs/uab_ngs_functions_v1.sh  # load shared run_cmd() & run_step()
-# load needed modules 
+# load needed modules
 module load  galaxy/galaxy-command-line # bcftools & samtools (0.1.12a (r862))
-#module load  ngs-ccts/samtools-0.1.19
+module load  ngs-ccts/samtools-0.1.19
 if [ -z "$BWA" ]; then export BWA="/share/apps/ngs-ccts/bwa-0.6.2/bwa"; fi
 if [ -z "$PICARD_JAR" ]; then export PICARD_JAR=/share/apps/ngs-ccts/picard-tools/picard-tools-1.110/CollectInsertSizeMetrics.jar; fi
 
@@ -20,9 +20,9 @@ if [ -z "$PICARD_JAR" ]; then export PICARD_JAR=/share/apps/ngs-ccts/picard-tool
 #$ -V   # need this for parameter passing from MASTER to SLAVE!
 #$ -j y # merge stderr into stdout
 # email at:  Begining, End, Abort, Suspend
-#$ -m beas  
+#$ -m beas
 #
-# ** RUN TIME ** 
+# ** RUN TIME **
 #$ -l h_rt=119:00:00
 #$ -l s_rt=120:55:00
 #
@@ -34,18 +34,20 @@ if [ -z "$PICARD_JAR" ]; then export PICARD_JAR=/share/apps/ngs-ccts/picard-tool
 CMD_LINE_PARAM_LIST="WORK_DIR SAMPLE_NAME CONTIG_FASTA REF_FASTA BAM_OUT"
 DERIVED_VAR_LIST="CMD_LINE HOSTNAME PROJECT_DIR DONE_ONLY QSUB_PE_OVERRIDE"
 
-QSUB_DRMAA="-l vf=5.9G -l h_vmem=6G" 
+QSUB_DRMAA="-l vf=5.9G -l h_vmem=6G"
+
+if [ -z "$NSLOTS" ]; then NSLOTS=1; fi
 
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} JOB_DIR"
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} BWA_VER BWA"
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} SAMTOOLS_VER SAMTOOLS"
 export DERIVED_VAR_LIST="${DERIVED_VAR_LIST} PICARD_VER"
 
-#====================================================================== 
+#======================================================================
 # MASTER: submit-self on a head-node
-#====================================================================== 
+#======================================================================
 if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
-    
+
     export TASK_NAME=`basename $0 .sh | sed -e 's/^qsub_//'`
 
     # --------------------------
@@ -57,28 +59,41 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 
     # check for debug or no qsub
     QSUB=`which qsub 2>/dev/null`
-
+    if [[ -z "JOB_ID" && -z "$QSUB" ]]; then
+	echo "**** NO QSUB [NSLOTS=$NSLOTS] ****"
+	export JOB_ID=run_now
+    fi
+    if [[ -z "JOB_ID" && $HOSTNAME != cheaha* ]]; then
+	echo "**** NOT ON HEAD NODE [HOSTNAME=$HOSTNAME] ****"
+	export JOB_ID=run_now
+    fi
     #HOSTNAME=DEBUG
     # parse params
-    while [[ "$1" == -* ]]; do 
+    while [[ "$1" == -* ]]; do
 	echo "PARSE FLAG: $1"
-	if [[ "-debug" == "$1" || "-inline" == "$1" || $HOSTNAME != cheaha* || -z "$QSUB" ]]; then
-	    if [[ "-debug" == "$1" || "-inline" == "$1" ]]; then shift 1; fi
+	if [[ "-debug" == "$1" || "-inline" == "$1" ]]; then
 	    export JOB_ID=run_now
-	    echo "**** NO QSUB [NSLOTS=$NSLOTS] ****" 
-	    continue
+	    shift 1;
+	    continue;
 	fi
 	# check for .done mode
 	if [ "-done" == "$1" ]; then
 	    export DONE_ONLY=yes
-	    echo "**** .DONE MODE ON **** (skip step based ONLY on .done file) " 
+	    echo "**** .DONE MODE ON **** (skip step based ONLY on .done file) "
+	    shift 1
+	    continue
+	fi
+	# check for CLEAN mode (delete temporary files)
+	if [[ "-clean" == "$1" ]]; then
+	    export CLEAN=yes
+	    echo "**** CLEAN MODE ON **** (delete temp files) "
 	    shift 1
 	    continue
 	fi
 	# check for -bwa  over-ride
 	if [ "-bwa" == "$1" ]; then
 	    export BWA="$2"
-	    echo "**** -BWA OVERRIDE=$BWA **** " 
+	    echo "**** -BWA OVERRIDE=$BWA **** "
 	    shift 1
 	    shift 1
 	    continue
@@ -86,7 +101,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 	# check for -index  over-ride
 	if [ "-index" == "$1" ]; then
 	    export INDEX="$2"
-	    echo "**** -INDEX OVERRIDE=$INDEX **** " 
+	    echo "**** -INDEX OVERRIDE=$INDEX **** "
 	    shift 1
 	    shift 1
 	    continue
@@ -121,7 +136,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
     # paths
     # BWA
     export BWA_DIR=`dirname $BWA`
-    # get BWA abbreviations 
+    # get BWA abbreviations
     export BWA_VER=`$BWA 2>&1 | grep "^Version" | cut -d " " -f 2  | sed -e 's/[.-]/_/g;'`
     export PICARD_VER=`basename $PICARD_JAR .jar | cut -c 8-`
     export SAMTOOLS_VER=`samtools 2>&1 | grep "^Version" | cut -d " " -f 2  | sed -e 's/[.-]/_/g;'`
@@ -132,7 +147,7 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
     #export BWA_OUT_DIR=${WORK_DIR}/bwa		;export DIR_LIST="$DIR_LIST BWA_OUT_DIR"
     for dir in $DIR_LIST; do
 	MDIR=`eval echo \\${$dir}`
-	if [ ! -e ${MDIR} ]; then 
+	if [ ! -e ${MDIR} ]; then
 	    run_cmd - mkdir -p $MDIR
 	fi
     done
@@ -163,16 +178,16 @@ if [[ -z "$JOB_ID" || "$1" == "-inline" ]]; then
 fi
 
 
-#====================================================================== 
+#======================================================================
 # actual slave work
-#====================================================================== 
+#======================================================================
 if [ -n "$JOB_ID"  ]; then
     # backup script/cmd-line
     export SCRIPT_BAK=jobs/$JOB_NAME.$JOB_ID.qsub_${TASK_NAME}.sh
     cp $0 ${SCRIPT_BAK}
     export SCRIPT_DOIT=jobs/$JOB_NAME.$JOB_ID.doit.sh
     echo "$PWD/${SCRIPT_BAK} ${CMD_ARGS}" > ${SCRIPT_DOIT}
-    
+
     echo "-- environment --"
     echo "JOB_NAME: $JOB_NAME"
     echo "JOB_ID: $JOB_ID"
@@ -185,7 +200,7 @@ if [ -n "$JOB_ID"  ]; then
     for myvar in $DERIVED_VAR_LIST ; do
 	echo -n "$myvar	:"; eval echo \$$myvar
     done
-    
+
     echo "I'm a qsub slave: "
     #echo "cd $OUT_DIR"
     cd ${WORK_DIR}
@@ -202,12 +217,12 @@ if [ -n "$JOB_ID"  ]; then
     # create bwa version index dir
     export BWA_INDEX_DIR=`dirname ${REF_FASTA}`/bwa_${BWA_VER}
     mkdir -p ${BWA_INDEX_DIR}
-    
+
     # link wrapped reference
     export REF_LINK=$BWA_INDEX_DIR/`basename $REF_FASTA_WRAPPED`
     run_step $SAMPLE_NAME $REF_LINK "symlink ref(60)" - \
 	ln -sf $REF_FASTA_WRAPPED $REF_LINK
-    
+
     # index with BWA, based on length.
     export BWA_REF_INDEXED=$REF_LINK
     if [ ! -e "${BWA_REF_INDEXED}.bwt" ]; then
@@ -230,7 +245,7 @@ if [ -n "$JOB_ID"  ]; then
     SAM_ALIGN=$BAM_OUT.aligned.unsorted.sam
     # -r $RG_NAME  (skip RG for now)
     run_step $SAMPLE_NAME $SAM_ALIGN BWA_sw - \
-	$BWA bwasw \
+	$BWA bwasw -t $NSLOTS \
 	-f $SAM_ALIGN \
 	$BWA_REF_INDEXED \
 	$CONTIG_FASTA
@@ -252,6 +267,13 @@ if [ -n "$JOB_ID"  ]; then
 	${BAM_OUT} \
 	${BAI_OUT}
 
+    # cleanup
+    if [ -n "$CLEAN" ]; then
+	echo "# cleanup (rm)"
+	echo "#    $SAM_ALIGN"; rm $SAM_ALIGN $SAM_ALIGN.done
+	echo "#    $BAM_USORT"; rm $BAM_USORT $BAM_USORT.done
+    fi
+
     # Flagstat of alignment
     FLAGSTAT_OUT=${BAM_OUT}.flagstat
     run_step "$SAMPLE_NAME" "$FLAGSTAT_OUT" SAMTOOLS_flagstat "$FLAGSTAT_OUT" \
@@ -265,9 +287,6 @@ if [ -n "$JOB_ID"  ]; then
 	INPUT=$BAM_OUT \
 	OUTPUT=$FRAGSIZE_OUT \
 	HISTOGRAM_FILE=$FRAGSIZE_HIST
-	
-    
-    
 
     # SAMTOOLs PILEUP -> VCF
     SAMTOOLS_REF_INDEXED=${REF_FASTA}.fai
@@ -275,10 +294,10 @@ if [ -n "$JOB_ID"  ]; then
 	samtools faidx ${REF_FASTA_WRAPPED}
     BCF_RAW=${BAM_OUT}.raw.bcf
     run_step $SAMPLE_NAME $BCF_RAW SAMTOOLS_mpileup_vcf $BCF_RAW  \
-	samtools mpileup -C50 -g --f ${REF_FASTA_WRAPPED} $BAM_OUT 
+	samtools mpileup -C50 -g --f ${REF_FASTA_WRAPPED} $BAM_OUT
     VCF_OUT=${BAM_OUT}.vcf
     run_step $SAMPLE_NAME $VCF_OUT SAMTOOLS_mpileup_vcf $VCF_OUT  \
 	bcftools view -cv $BCF_RAW
-    
+
     exit 0
 fi
