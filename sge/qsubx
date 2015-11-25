@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+#
+# error if no params
+#
+if [ ! -n "$*" ]; then 
+  echo "ERROR: must provide file or directory (or several) as arguments."
+  echo ""
+  echo "USAGE: $0 cmd args"
+  echo ""
+  echo "A qsub -b y $(which cmd) args "
+  echo "will be launched"
+  echo ""
+  echo "EXAMPLE: fastq.gz decompesssion"
+  echo "  $0 gunzip foo.gz"
+  echo "or"
+  echo "  $0 du -sm fred/"
+  exit 1 
+fi
+
+#
+# parse args
+#
+CMD=$1; shift
+ARGS=$*
+
+# 
+# DRMAA
+# 
+ARGS_NAME=$(echo "$ARGS" | perl -pe 's|[ \t/]|_|g')
+JNAME=qsubx_${CMD}_${ARGS_NAME}
+QSUB_OPTS="-cwd -V -N $JNAME -M $USER@uab.edu -m beas -e $JNAME.err -o $JNAME.out "
+DRMAA="-l h_rt=12:30:00,vf=900M,h_vmem=1G"
+
+
+
+qsub -terse $QSUB_OPTS $DRMAA -b y $(which $CMD) $ARGS
+exit $?
