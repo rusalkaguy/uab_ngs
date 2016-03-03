@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# qexe hours nslots mem exe args
+#
+# run a binary executable command line as a qsub job
+#
+
+export HOURS=2;	if [[ -n "$1" && "$1" > 0 ]]; then HOURS=$1; shift; fi
+export NSLOTS=1;	if [[ -n "$1" && "$1" > 0 ]]; then NSLOTS=$1; shift; fi
+export MEM=2;		if [[ -n "$1" && "$1" > 0 ]]; then MEM=$1; shift; fi
+export EXE=missing;	if [[ -n "$1"             ]]; then EXE=$(which $1); shift 
+else
+    echo "SYNTAX $0 hours nslots mem exe [options]"
+    exit 1
+fi
+
+PE_DRMAA=;  if [ "$NSLOTS" -gt 1 ]; then PE_DRMAA="-pe smp $NSLOTS";fi
+export TASK_NAME=$(echo "$*" | perl -pe 's|^|qexec'$EXE'_|;s/[^a-z0-9_-]/_/ig;')
+
+mkdir -p jobs
+
+qsub -N $TASK_NAME \
+    -cwd \
+    -V \
+    -l h_rt=04:00:00 $PE_DRMAA -l vf=$(($MEM - 1 )).9G,h_vmem=${MEM}G \
+    -j y -o 'jobs/$JOB_NAME.$JOB_ID.out'\
+    -m beas -M $USER@uab.edu \
+    -b y $EXE $*
+
+
+exit $?
+
+

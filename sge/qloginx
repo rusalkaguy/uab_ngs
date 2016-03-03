@@ -1,0 +1,8 @@
+#!/bin/bash
+export NSLOTS=1; if [[ -n "$1" && "$1" > 0 ]]; then NSLOTS=$1; shift; fi
+export MEM=2;   if [[ -n "$1" && "$1" > 0 ]]; then MEM=$1; shift; fi
+PE_DRMAA=;  if [ "$NSLOTS" -gt 1 ]; then PE_DRMAA="-pe smp $NSLOTS";fi
+
+if [ "$NSLOTS" -gt 1 ]; then echo "export NSLOTS=$NSLOTS"; fi
+exec qlogin  -l h_rt=04:00:00 $PE_DRMAA -l vf=$(($MEM - 1 )).9G,h_vmem=${MEM}G $*
+
