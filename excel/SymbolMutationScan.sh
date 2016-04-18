@@ -1,5 +1,6 @@
 #! /bin/csh
 # written by b zeeberg 11/18/02
+# REF: http://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-5-80
 
 foreach arg ($*)
 echo $arg
