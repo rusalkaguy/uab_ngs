@@ -5,7 +5,10 @@ module load ngs-ccts/ucsc_kent/2014-03-05
 genome=hg19
 chromSizes=${genome}.chrom.sizes
 if [ ! -e "${chromSizes} " ]; then echo fetching ${chromSizes}; fetchChromSizes  ${genome} > ${chromSizes}; fi
-for bam in *.bam; do
+bamlist="$*"
+if [ -z "${bamlist}" ]; then bamlist=$(ls -1 *.bam); fi
+echo BAMLIST=${bamlist}
+for bam in ${bamlist}; do
 	# takes 10 minutes to run? 
 	# bedGraph format: https://genome.ucsc.edu/goldenPath/help/bedgraph.html
 	# RNA-Seq use case http://www.cureffi.org/2013/11/18/an-mrna-seq-pipeline-using-gsnap-samtools-cufflinks-and-bedtools/ 
