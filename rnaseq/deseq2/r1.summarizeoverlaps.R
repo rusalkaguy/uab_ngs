@@ -41,7 +41,10 @@ if( length(sampleTable$bam) == sum(file.exists(sampleTable$bam)) ) {
 # make "bam" file reader
 #
 library("Rsamtools")
-bamfiles  <- BamFileList(sampleTable$bam, yieldSize=2000000, asMates=TRUE)
+# create BAM list
+# asMates:  (Bioconductor > 2.12) use asMates=T for paired-end, even if sorted by position
+# bieldSize: limits how man reads are loaded into memory at a one time (batch size), limit RAM usage.
+Rbamfiles  <- BamFileList(sampleTable$bam, yieldSize=2000000, asMates=TRUE)
 names(bamfiles) <- sampleTable$sample_name
 
 # print out genome for manual validation
