@@ -2,3 +2,6 @@
 *.vcf
 # don't check in log files
 *.log
+# emacs backup files
+*~
+\#*#
