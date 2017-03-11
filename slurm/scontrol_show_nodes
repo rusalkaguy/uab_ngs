@@ -1,0 +1,20 @@
+#!/bin/bash
+
+FIELDS="1,5,7,12,14,18,19"
+SORT="-k6,6nr -k2,2n"
+GREP="."
+
+if [ ! -z "$1"  ]; then 
+    if [ "$1" != "." ]; then
+	FIELDS="$1"
+	SORT="-k1,1"
+    fi
+   shift
+fi
+if [ ! -z "$1" ]; then 
+   GREP="$1"
+   shift
+fi
+
+#echo FIELDS=${FIELDS}
+scontrol show node | awk -f  ~curtish/uab_ngs/slurm/node_info2grid.awk | cut -f ${FIELDS} | (read h; echo "$h"; grep $GREP | sort $SORT) | column -t

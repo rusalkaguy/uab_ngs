@@ -1,0 +1,10 @@
+#!/bin/bash
+
+scontrol_show_nodes  \
+	| awk '\
+	BEGIN{CONVFMT = "%2.0f"} \
+	($1 ~ /^c[0-9]+/){x=substr($1,5,1); y=substr($1,4,1); cpu=$2; mem=($6-$7)/1000; grid["cpu"][x][y]=cpu; grid["mem"][x][y]=mem}\
+	END{
+		print "-------- CORES ALLOC --------";for(y=0; y< 10; y++){for(x=0;x<10; x++){printf grid["cpu"][x][y]"\t"};printf "\n"};\
+		print "-------- MEM   AVAIL --------";for(y=0; y< 10; y++){for(x=0;x<10; x++){printf grid["mem"][x][y]"\t"};printf "\n"}\
+	}' 
