@@ -1,0 +1,4 @@
+#!/bin/bash
+
+FORMAT=JobID,JobName,Partition,Account,AllocCPUS,start,end,elapsed,State,ExitCode
+sacct --format=${FORMAT} $*
