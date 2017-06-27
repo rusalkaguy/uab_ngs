@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# nucleotide reverse complement
+
+if [[ -z "$1" || -e "$1" || "$1" == "-" ]]; then 
+   cat $* | rev | tr ACGTN TGCAN
+else
+   echo $* | rev | tr ACGTN TGCAN
+fi
+	
