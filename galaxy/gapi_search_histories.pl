@@ -1,13 +1,14 @@
 #!/usr/bin/env perl
 use strict;
-use LWP::Simple qw(get);
+use LWP::Simple;
+use LWP::UserAgent; # add error handling
 use Data::Dumper;
 use Getopt::Std;
 use lib '/home/curtish/lib/perl5/site_perl/5.8.8/';
 use JSON        qw(from_json);
 
 # defaults
-my $galaxy_url = "http://galaxy.uabgrid.uab.edu";
+my $galaxy_url = "https://galaxy.genome.uab.edu";
 my $key_env = "GALAXY_API_KEY";
 my $dataset_status = "ok";
 
@@ -84,8 +85,10 @@ if( !$opts{q} ) {
 # get history list
 my $histories_url = $opts{g}."/api/histories".$key_url;
 if( $opts{v} ) {print "# Fetching $histories_url\n"; }
-my $histories = get($histories_url);
+my $histories = get($histories_url);  # LWP::Simple - no error codes
+if( ! $histories ) { getprint($histories_url); die "ERROR: http get failed on $histories_url"; } # output errors
 if( $opts{v} ) {print "# got ", length($histories), " bytes\n"; }
+if( $opts{v} ) {print "histories=$histories\n";}
 my $j = from_json($histories);
 if( $opts{v} ) {print "# got ", scalar(@{$j}), " histories\n"; }
 
