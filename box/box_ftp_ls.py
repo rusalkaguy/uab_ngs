@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+
+# see https://docs.python.org/2/library/ftplib.html#ftplib.FTP_TLS
+
 import sys
 
 from netrc import netrc, NetrcParseError
@@ -23,10 +26,20 @@ def get_credentials(host):
 
     return credentials
 
+def parse_line(line):
+    """
+    Takes a line of MLSD output, parses, and prints
+    """
+    d = dict((i.split("=")[0],i.split("=")[1]) for i in line.split(";")[0:4])
+    d['Name']=line.split(";")[-1].lstrip()
+    print(d)
+
 def ftps_connect(credentials):
     """
     Takes in a tuple containing host, username and passwd and connects to ftp server and does stuff
     """
+    cmd="LIST" # retrieves a list of files and information about those files.
+    cmd="MLSD" # retrieves a machine readable list of files and information about those files
 
     # Using  *credentials unpacks your tuple for you WOWWW
     print('Connect to', credentials[0:2])
@@ -34,21 +47,21 @@ def ftps_connect(credentials):
         ftps=FTP_TLS(*credentials)
         ftps.prot_p() # switch toi secure data connection
         # Do stuff here
-        print(ftps.retrlines('LIST'))
+        print(ftps.retrlines("MLSD"),parse_line)
+        ftps.retrlines("MLSD",parse_line)
         #.....
     except:
         print('Sorry - FTPS connect failed:', credentials[0:1], "error:", sys.exc_info()[0])
         
     return 0
 
+
+
 if __name__ == '__main__':
     # Always do input validation okay, please?
 
+    # Size=497545189951;Modify=20170727181808.000;Create=20170621145109.000;Type=dir; Travis_Ptacek_Documentation
     hostname="ftp.box.com"
-    if len(sys.argv) > 1:
-        hostname=sys.argv[1]
-
     credentials = get_credentials(hostname)
-
-    rc= ftps_connect(credentials)
+    rc=ftps_connect(credentials)
     sys.exit(rc)
