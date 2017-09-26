@@ -1,0 +1,237 @@
+#!/usr/bin/env python
+import os, errno
+from os import walk 
+import sys
+
+from netrc import netrc, NetrcParseError
+from getpass import getpass, getuser
+from ftplib import FTP_TLS
+
+import json
+
+mypath="."
+md5dir = ".md5"
+md5ext = ".md5"
+md5extBox = ".box.md5"
+splitSizeG = 10 # 10G
+splitThresh = 2**30*splitSizeG # 10G
+splitSuffix = ".split"+str(splitSizeG)+"G"
+
+# box.com
+boxHostname="ftp.box.com"
+
+#
+# scan up for .ics.json
+#
+searchDir = os.path.abspath(mypath)
+icsFilename = ".ics.json" 
+icsDict = None
+icsPath = []
+while icsDict is None:
+        icsFile = os.path.join(searchDir, icsFilename)
+        if os.path.exists(icsFile):
+                with open(icsFile, "r") as infile:
+                        icsDict = json.load(infile)
+                for key in ["ics_id", "boxPath"]: 
+                        try:
+                                print icsFile,":", key, "=", icsDict[key]
+                        except KeyError:
+                                raise Exception("Required Key '"+key+"' not found in "+ icsFile) 
+        else:
+                searchDirParent = os.path.dirname(searchDir)
+                relPath = os.path.basename(searchDir)
+                if searchDir == searchDirParent:
+                        raise Exception("Can't find "+icsFilename+" in "+os.path.abspath(mypath)+" or parent directories")
+                searchDir=searchDirParent
+                icsPath = [relPath]+icsPath
+print "ICS relPath=", icsPath
+if icsPath is None:
+        icsDict["boxPathFinal"] = icsDict["boxPath"]
+else:
+        icsDict["boxPathFinal"] = os.path.join(icsDict["boxPath"],os.path.join(*icsPath))
+print "ICS boxPathFinal=", icsDict["boxPathFinal"]
+
+# create MD5 checksum cache
+if not os.path.exists(os.path.join(os.getcwd(), md5dir)):
+        print "Creating ",md5dir
+        os.makedirs(md5dir)
+
+
+# REF: https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
+print "# Scanning [",mypath,"]"
+f = []
+for (dirpath, dirnames, filenames) in walk(mypath):
+        # filter out backups and junk
+        filenames = filter(lambda f: not(f.endswith("~") or f.startswith("#") or f.startswith(".ics.") or f.endswith(splitSuffix+"..")), filenames)
+        dirnames = filter(lambda d: not (d==".git" or d==".md5" or d=="logs") ,filenames)
+        f.extend(filenames)
+        break
+
+print "Found ", len(filenames), " eligable files"
+
+fileinfo = {}
+for filename in filenames:
+        fileinfo[filename] = {
+                "size":os.path.getsize(filename)
+                , "md5file":os.path.join(md5dir,filename+md5ext)
+                , "md5fileBox":os.path.join(md5dir,filename+md5extBox)
+        }
+#print fileinfo
+
+#
+# scan for original md5s, compute and cache on in md5dir if missing
+#
+print "==== original md5 cache ==="
+import  subprocess
+import re
+for filename, info in fileinfo.iteritems():
+        md5file= info["md5file"]
+        if not os.path.exists(md5file):
+                print "md5sum '"+filename+"' > '"+md5file+"'"
+                with open(md5file,"w") as outfile:
+                        subprocess.call(['md5sum',filename],stdout=outfile)
+        with open(md5file, "r") as infile:
+                md5line = infile.readline()
+                md5info = re.split('  ', md5line) # is space-space safe? What if space-space in filename?
+                info["md5"] = md5info[0]
+                
+
+print info
+#
+# compare to box.com  - upload if missing
+#
+print "==== box.com ==="
+def ftps_get_credentials(host):
+    """
+    Returns the ftp credentials for a host as a tuple containing 3 items in the order
+        ('host', 'user', 'pass')
+    This assumes a .netrc file exists in the users home directory and a valid host exists
+    else you'll get prompted
+    """
+
+    try:
+        infos = netrc().authenticators(host)
+        # netrc returns (user,None,pass) - fix to match input for FTP
+        credentials = (host,infos[0],infos[2])
+    except NetrcParseError:
+        print('Sorry no netrc for this host, please enter in your credentials')
+        credentials = (host, getuser(), getpass())
+
+    return credentials
+
+
+def mlsd_parse_line_2_dict(tdict,line):
+        """
+        Takes a line of MLSD output, parses, and prints
+        """
+        filename = line.split(";")[-1].lstrip()
+        d = dict((i.split("=")[0],i.split("=")[1]) for i in line.split(";")[0:4])
+        d['Name']=filename
+        #remoteFiles[filename]=d
+        print "inside callback 2:", d
+        tdict[filename]=d
+        # retrlines eats return values
+
+def ftps_connect(credentials):
+    """
+    Takes in a tuple containing host, username and passwd and connects to ftp server and does stuff
+    """
+    #cmd="LIST" # retrieves a list of files and information about those files.
+    cmd="MLSD" # retrieves a machine readable list of files and information about those files
+
+    # Using  *credentials unpacks your tuple for you WOWWW
+    print('Connect to', credentials[0:2])
+    try:
+        ftps=FTP_TLS(*credentials)
+        ftps.prot_p() # switch toi secure data connection
+        # Do stuff here
+        #print(ftps.retrlines("MLSD",mlsd_parse_line))
+        #print fileInfo
+        #.....
+    except:
+        print('Sorry - FTPS connect failed:', credentials[0:1], "error:", sys.exc_info())
+        
+    return ftps
+
+def ftp_chdir(ftp_path,ftp_conn):
+    print "ftp_path="+ftp_path
+    dirs = [d for d in ftp_path.split('/') if d != '']
+    print "dirs=",dirs
+    for p in dirs:
+        print( "chdir "+p)
+        ftp_check_dir(p, ftp_conn)
+
+
+def ftp_check_dir(chk_dir, ftp_conn):
+    filelist = []
+    ftp_conn.retrlines('LIST', filelist.append)
+    found = False
+
+    for f in filelist:
+        if f.split()[-1] == chk_dir and f.lower().startswith('d'):
+            found = True
+
+    if not found:
+        ftp_conn.mkd(chk_dir)
+    ftp_conn.cwd(chk_dir)
+
+
+# connect
+boxCredentials = ftps_get_credentials(boxHostname)
+boxConn = ftps_connect(boxCredentials)
+
+# get remote files
+remoteDir = icsDict["boxPathFinal"]
+print "remoteDir="+remoteDir
+ftp_chdir(remoteDir, boxConn)
+remoteFiles = {}
+flist = boxConn.retrlines("MLSD", lambda line: mlsd_parse_line_2_dict(remoteFiles,line) )
+
+print "=== flist ===\n", flist
+print "=== remote files ===\n", remoteFiles
+
+# figure out what to do with local files
+for filename, info in fileinfo.iteritems():
+        if info["size"] <= splitThresh:
+                #
+                # handle small files - below the split threshold
+                #
+                # TODO: check filesizes
+                #
+                if filename in remoteFiles:
+                        # already on server - perhaps check size/md5
+                        print "SKIP "+filename
+                else: 
+                        # missing - copy it up
+                        print "STOR '"+filename+"'"
+                        with open(filename,"rb") as local_file:
+                            boxConn.storbinary('STOR '+filename, local_file)
+        else:
+                #
+                # handle HUGE files  - split and transfer
+                # 
+                # OPTIMIZATION: this should check  if splits are on remote BEFORE splitting locally!
+                #
+                splitHex =  map(lambda i:hex(0xaa+i)[-2:],range(0,(info["size"]-1)/splitThresh))
+                print "HUGE '"+filename+"' with splits ["+",".join(splitHex)+"]"
+                splitNames = map(lambda h:filename+splitSuffix+h, splitHex)
+                if not os.path.exists(splitNames[-1]):
+                        #
+                        # split the file
+                        #
+                        cmdVec = ['split', '-b'+str(splitSizeG)+'G',filename, filename+splitSuffix]
+                        print "SPLIT '"+"' '".join(cmdVec)+"'"
+                        subprocess.check_call(cmdVec)
+                # 
+                # push the split files up, if not already there
+                #
+                for splitFilename in splitNames:
+                        if splitFilename in remoteFiles:
+                                # already on server - perhaps check size/md5
+                                print "SKIP "+splitFilename
+                        else: 
+                                # missing - copy it up
+                                print "STOR '"+splitFilename+"'"
+                                with open(filename,"rb") as local_file:
+                                    boxConn.storbinary('STOR '+filename, local_file)
+                        
