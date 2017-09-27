@@ -20,6 +20,13 @@ splitSuffix = ".split"+str(splitSizeG)+"G"
 # box.com
 boxHostname="ftp.box.com"
 
+# get env (SLURM?)
+slurmJob=False
+slurmJobIdName='SLURM_JOB_ID'
+if os.environ.get(slurmJobIdName) is not None:
+        slurmJob=True
+        print slurmJobIdName+"="+os.environ.get(slurmJobIdName)
+
 #
 # scan up for .ics.json
 #
@@ -87,9 +94,12 @@ import re
 for filename, info in fileinfo.iteritems():
         md5file= info["md5file"]
         if not os.path.exists(md5file):
-                print "md5sum '"+filename+"' > '"+md5file+"'"
+                cmdVec = ['md5sum', filename]
+                if slurmJob: 
+                        cmdVec = ['srun']+cmdVec
+                print "'"+"' '".join(cmdVec)+"' > '"+md5file+"'"
                 with open(md5file,"w") as outfile:
-                        subprocess.call(['md5sum',filename],stdout=outfile)
+                        subprocess.call(cmdVec,stdout=outfile)
         with open(md5file, "r") as infile:
                 md5line = infile.readline()
                 md5info = re.split('  ', md5line) # is space-space safe? What if space-space in filename?
@@ -218,10 +228,16 @@ for filename, info in fileinfo.iteritems():
                         # split the file
                         #
                         cmdVec = ['split', '-b'+str(splitSizeG)+'G',filename, filename+splitSuffix]
+                        if slurmJob: 
+                                cmdVec = ['srun']+cmdVec
                         print "SPLIT '"+"' '".join(cmdVec)+"'"
                         subprocess.check_call(cmdVec)
+                        # 
+                        # md5 sum the parts
+                        #
+                        # TBD
                 # 
-                # push the split files up, if not already there
+                # push the split files up, if not already there and up-to-date
                 #
                 for splitFilename in splitNames:
                         if splitFilename in remoteFiles:
