@@ -22,10 +22,12 @@ boxHostname="ftp.box.com"
 
 # get env (SLURM?)
 slurmJob=False
-slurmJobIdName='SLURM_JOB_ID'
-if os.environ.get(slurmJobIdName) is not None:
-        slurmJob=True
-        print slurmJobIdName+"="+os.environ.get(slurmJobIdName)
+# SLURM srun working during interactive sessions, but hanging on sbatch 
+# logs/769792.c0076.err.txt:srun: Job step creation temporarily disabled, retrying
+#slurmJobIdName='SLURM_JOB_ID'
+#if os.environ.get(slurmJobIdName) is not None:
+#        slurmJob=True
+#        print slurmJobIdName+"="+os.environ.get(slurmJobIdName)
 
 #
 # scan up for .ics.json
