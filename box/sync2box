@@ -45,7 +45,7 @@ while icsDict is None:
                 searchDir=searchDirParent
                 icsPath = [relPath]+icsPath
 print "ICS relPath=", icsPath
-if icsPath is None:
+if len(icsPath) == 0:
         icsDict["boxPathFinal"] = icsDict["boxPath"]
 else:
         icsDict["boxPathFinal"] = os.path.join(icsDict["boxPath"],os.path.join(*icsPath))
@@ -127,8 +127,6 @@ def mlsd_parse_line_2_dict(tdict,line):
         filename = line.split(";")[-1].lstrip()
         d = dict((i.split("=")[0],i.split("=")[1]) for i in line.split(";")[0:4])
         d['Name']=filename
-        #remoteFiles[filename]=d
-        print "inside callback 2:", d
         tdict[filename]=d
         # retrlines eats return values
 
