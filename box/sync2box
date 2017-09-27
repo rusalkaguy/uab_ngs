@@ -212,7 +212,7 @@ for filename, info in fileinfo.iteritems():
                 # 
                 # OPTIMIZATION: this should check  if splits are on remote BEFORE splitting locally!
                 #
-                splitHex =  map(lambda i:hex(0xaa+i)[-2:],range(0,(info["size"]-1)/splitThresh))
+                splitHex =  map(lambda i:hex(0xaa+i)[-2:],range(0,((info["size"]-1)/splitThresh)+1))
                 print "HUGE '"+filename+"' with splits ["+",".join(splitHex)+"]"
                 splitNames = map(lambda h:filename+splitSuffix+h, splitHex)
                 if not os.path.exists(splitNames[-1]):
@@ -232,6 +232,6 @@ for filename, info in fileinfo.iteritems():
                         else: 
                                 # missing - copy it up
                                 print "STOR '"+splitFilename+"'"
-                                with open(filename,"rb") as local_file:
-                                    boxConn.storbinary('STOR '+filename, local_file)
+                                with open(splitFilename,"rb") as local_file:
+                                    boxConn.storbinary('STOR '+splitFilename, local_file)
                         
