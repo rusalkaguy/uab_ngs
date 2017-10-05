@@ -9,6 +9,7 @@ from ftplib import FTP_TLS
 
 import json
 
+verbose = True
 mypath="."
 md5dir = ".md5"
 md5ext = ".md5"
@@ -29,54 +30,85 @@ slurmJob=False
 #        slurmJob=True
 #        print slurmJobIdName+"="+os.environ.get(slurmJobIdName)
 
+# ======================================================================
 #
 # scan up for .ics.json
 #
-searchDir = os.path.abspath(mypath)
-icsFilename = ".ics.json" 
-icsDict = None
-icsPath = []
-while icsDict is None:
-        icsFile = os.path.join(searchDir, icsFilename)
-        if os.path.exists(icsFile):
-                with open(icsFile, "r") as infile:
-                        icsDict = json.load(infile)
-                for key in ["ics_id", "boxPath"]: 
-                        try:
-                                print icsFile,":", key, "=", icsDict[key]
-                        except KeyError:
-                                raise Exception("Required Key '"+key+"' not found in "+ icsFile) 
+# ======================================================================
+def find_ics_json(mypath):
+        searchDir = os.path.abspath(mypath)
+        icsFilename = ".ics.json" 
+        icsDict = None
+        icsPath = []
+        while icsDict is None:
+                icsFile = os.path.join(searchDir, icsFilename)
+                if verbose: print( "Scanning",icsFile)
+                if os.path.exists(icsFile):
+                        with open(icsFile, "r") as infile:
+                                icsDict = json.load(infile)
+                                for key in ["ics_id", "boxPath"]: 
+                                        try:
+                                                if verbose: print( icsFile,":", key, "=", icsDict[key])
+                                        except KeyError:
+                                                raise Exception("Required Key '"+key+"' not found in "+ icsFile) 
+                else:
+                        searchDirParent = os.path.dirname(searchDir)
+                        relPath = os.path.basename(searchDir)
+                        if searchDir == searchDirParent:
+                                raise Exception("Can't find "+icsFilename+" in "+os.path.abspath(mypath)+" or parent directories")
+                        searchDir=searchDirParent
+                        icsPath = [relPath]+icsPath
+                        if verbose: print( "ICS relPath=", icsPath )
+        if len(icsPath) == 0:
+                icsDict["boxPathFinal"] = icsDict["boxPath"]
         else:
-                searchDirParent = os.path.dirname(searchDir)
-                relPath = os.path.basename(searchDir)
-                if searchDir == searchDirParent:
-                        raise Exception("Can't find "+icsFilename+" in "+os.path.abspath(mypath)+" or parent directories")
-                searchDir=searchDirParent
-                icsPath = [relPath]+icsPath
-print "ICS relPath=", icsPath
-if len(icsPath) == 0:
-        icsDict["boxPathFinal"] = icsDict["boxPath"]
-else:
-        icsDict["boxPathFinal"] = os.path.join(icsDict["boxPath"],os.path.join(*icsPath))
-print "ICS boxPathFinal=", icsDict["boxPathFinal"]
+                icsDict["boxPathFinal"] = os.path.join(icsDict["boxPath"],os.path.join(*icsPath))
+        if verbose: print( "ICS boxPathFinal=", icsDict["boxPathFinal"] )
+        return(icsDict)
 
-# create MD5 checksum cache
-if not os.path.exists(os.path.join(os.getcwd(), md5dir)):
-        print "Creating ",md5dir
-        os.makedirs(md5dir)
+# ----------------------------------------------------------------------
+# md5sum: compute and cache, if needed
+# ----------------------------------------------------------------------
+def cache_md5sum(filename, md5dir, md5ext): 
+        import  subprocess
+        import re
+        md5file=os.path.join(md5dir,filename+md5ext)
+        if verbose: print( "cache_md5sum("+filename+")=>"+md5file)
+        # if md5 sum missing, empty or out-of-date
+        if not os.path.exists(md5file) or os.stat(md5file).st_size == 0 or os.path.getmtime(filename) > os.path.getmtime(md5file):
+                if verbose:
+                        if not os.path.exists(md5file): print( "MISSING",md5file )
+                        elif os.stat(md5file).st_size == 0: print( "EMPTY",md5file )
+                        elif os.path.getmtime(filename) > os.path.getmtime(md5file): print( "STALE",md5file )
+                cmdVec = ['md5sum', filename]
+                if slurmJob: 
+                        cmdVec = ['srun']+cmdVec
+                if verbose: print( "'"+"' '".join(cmdVec)+"' > '"+md5file+"'")
+                with open(md5file,"w") as outfile:
+                        subprocess.call(cmdVec,stdout=outfile)
+        with open(md5file, "r") as infile:
+                md5line = infile.readline()
+                md5info = re.split('  ', md5line) # is space-space safe? What if space-space in filename?
+                info["md5"] = md5info[0]
+                return(md5info[0])
 
+# ======================================================================
+# main
+# ======================================================================
+
+icsDict = find_ics_json(mypath)
 
 # REF: https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
-print "# Scanning [",mypath,"]"
+print( "# Scanning [",mypath,"]")
 f = []
 for (dirpath, dirnames, filenames) in walk(mypath):
         # filter out backups and junk
         filenames = filter(lambda f: not(f.endswith("~") or f.startswith("#") or f.startswith(".ics.") or f.endswith(splitSuffix+"..")), filenames)
-        dirnames = filter(lambda d: not (d==".git" or d==".md5" or d=="logs") ,filenames)
+        dirnames = filter(lambda d: not (d==".git" or d==md5dir or d=="logs") ,filenames)
         f.extend(filenames)
         break
 
-print "Found ", len(filenames), " eligable files"
+print( "Found ", len(filenames), " eligable files")
 
 fileinfo = {}
 for filename in filenames:
@@ -90,29 +122,14 @@ for filename in filenames:
 #
 # scan for original md5s, compute and cache on in md5dir if missing
 #
-print "==== original md5 cache ==="
-import  subprocess
-import re
 for filename, info in fileinfo.iteritems():
-        md5file= info["md5file"]
-        if not os.path.exists(md5file):
-                cmdVec = ['md5sum', filename]
-                if slurmJob: 
-                        cmdVec = ['srun']+cmdVec
-                print "'"+"' '".join(cmdVec)+"' > '"+md5file+"'"
-                with open(md5file,"w") as outfile:
-                        subprocess.call(cmdVec,stdout=outfile)
-        with open(md5file, "r") as infile:
-                md5line = infile.readline()
-                md5info = re.split('  ', md5line) # is space-space safe? What if space-space in filename?
-                info["md5"] = md5info[0]
-                
+        info["md5"] = cache_md5sum(filename, md5dir, md5ext)
 
-print info
+
 #
 # compare to box.com  - upload if missing
 #
-print "==== box.com ==="
+print( "==== box.com ===")
 def ftps_get_credentials(host):
     """
     Returns the ftp credentials for a host as a tuple containing 3 items in the order
@@ -164,9 +181,9 @@ def ftps_connect(credentials):
     return ftps
 
 def ftp_chdir(ftp_path,ftp_conn):
-    print "ftp_path="+ftp_path
+    print( "ftp_path="+ftp_path)
     dirs = [d for d in ftp_path.split('/') if d != '']
-    print "dirs=",dirs
+    print( "dirs=",dirs)
     for p in dirs:
         print( "chdir "+p)
         ftp_check_dir(p, ftp_conn)
@@ -192,7 +209,7 @@ boxConn = ftps_connect(boxCredentials)
 
 # get remote files
 remoteDir = icsDict["boxPathFinal"]
-print "remoteDir="+remoteDir
+print( "remoteDir="+remoteDir)
 ftp_chdir(remoteDir, boxConn)
 remoteFiles = {}
 flist = boxConn.retrlines("MLSD", lambda line: mlsd_parse_line_2_dict(remoteFiles,line) )
