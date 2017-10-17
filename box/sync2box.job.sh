@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name sync2box
-#SBATCH --account=ICS                       ##Billing account
+##SBATCH --account=ICS                       ##Billing account
 #SBATCH --ntasks=1                          ##Number of PROCESSES
 #SBATCH --cpus-per-task=1                   ##Number of CORES per PROCESSS
 #SBATCH --mem-per-cpu=2000                  ##Memory specified for each core used (in MB) (no cores, use --mem=)
