@@ -13,6 +13,11 @@
 #  * if a white-list of files is given on the command line, it only 
 #    processes those files. 
 #  * hard-coded black-list: *~, #*, .ics.*, *.split10G??, .git/, logs/
+#  * assume ~/.netrc has an entry for box.com (where BOX_USER=BLAZERID@uab.edu)
+#      machine ftp.box.com
+#      login BOX_USER
+#      password BOX_EXTERNAL_PASSWORD
+
 # 
 # todo
 #  * uploading of md5 files in .md5 to box
