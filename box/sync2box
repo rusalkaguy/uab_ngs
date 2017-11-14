@@ -9,7 +9,13 @@
 #
 # notes
 #  * searches UP for .ics.json to specify the box_root target path in box.com
-#    - uses box_root + path relative to .ics.json 
+#    - uses box_root + path relative to .ics.json:
+#      {
+#         "_comment": "Informatics Consulting Service (ICS) project metadata file"
+#         ,"ics_id":"940"
+#         ,"boxPath" : "kimberly/CGM_10X"
+#      }
+#       
 #  * if a white-list of files is given on the command line, it only 
 #    processes those files. 
 #  * hard-coded black-list: *~, #*, .ics.*, *.split10G??, .git/, logs/
@@ -17,13 +23,13 @@
 #      machine ftp.box.com
 #      login BOX_USER
 #      password BOX_EXTERNAL_PASSWORD
-
 # 
 # todo
 #  * uploading of md5 files in .md5 to box
 #  * re-download and validation of files from box. 
 #  * put file splits in some place less visible, such as .sync2box/
 #  * externalize white/black lists - perhaps in .ics.json or a .gitignore like file.
+#  * auto-create a template .ics.json if one is not found. 
 #
 ######################################################################
 
