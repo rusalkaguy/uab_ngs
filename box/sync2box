@@ -1,4 +1,27 @@
 #!/usr/bin/env python
+######################################################################
+# sync2box [white_list_of_files]
+#
+# for all files in CWD:
+#  * compute checksums (in .md5/ directory)
+#  * split any files > 10G
+#  * upload (via TLS_FTP) new files to box.com
+#
+# notes
+#  * searches UP for .ics.json to specify the box_root target path in box.com
+#    - uses box_root + path relative to .ics.json 
+#  * if a white-list of files is given on the command line, it only 
+#    processes those files. 
+#  * hard-coded black-list: *~, #*, .ics.*, *.split10G??, .git/, logs/
+# 
+# todo
+#  * uploading of md5 files in .md5 to box
+#  * re-download and validation of files from box. 
+#  * put file splits in some place less visible, such as .sync2box/
+#  * externalize white/black lists - perhaps in .ics.json or a .gitignore like file.
+#
+######################################################################
+
 import os, errno
 from os import walk 
 import sys
