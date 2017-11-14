@@ -9,6 +9,9 @@ from ftplib import FTP_TLS
 
 import json
 
+import subprocess
+import re
+
 verbose = True
 mypath="."
 md5dir = ".md5"
@@ -70,10 +73,11 @@ def find_ics_json(mypath):
 # md5sum: compute and cache, if needed
 # ----------------------------------------------------------------------
 def cache_md5sum(filename, md5dir, md5ext): 
-        import  subprocess
-        import re
         md5file=os.path.join(md5dir,filename+md5ext)
         if verbose: print( "cache_md5sum("+filename+")=>"+md5file)
+        # create .md5 dir, if needed
+        if not os.path.exists(md5dir):
+                os.mkdir(md5dir)
         # if md5 sum missing, empty or out-of-date
         if not os.path.exists(md5file) or os.stat(md5file).st_size == 0 or os.path.getmtime(filename) > os.path.getmtime(md5file):
                 if verbose:
@@ -100,11 +104,20 @@ icsDict = find_ics_json(mypath)
 
 # REF: https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
 print( "# Scanning [",mypath,"]")
+whitelist = {}
+for (filename) in sys.argv[1:]: print(filename); whitelist[filename]=filename
 f = []
 for (dirpath, dirnames, filenames) in walk(mypath):
+        if(verbose): print( "raw filenames:", filenames)
         # filter out backups and junk
+
         filenames = filter(lambda f: not(f.endswith("~") or f.startswith("#") or f.startswith(".ics.") or f.endswith(splitSuffix+"..")), filenames)
+        if(verbose): print( "post filter1 filenames:", filenames)
         dirnames = filter(lambda d: not (d==".git" or d==md5dir or d=="logs") ,filenames)
+        if(len(whitelist)>0): 
+                if(verbose): print("White list: ", whitelist)
+                filenames = filter(lambda f: f in whitelist, filenames)
+        if(verbose): print( "post whitelist:", filenames)
         f.extend(filenames)
         break
 
