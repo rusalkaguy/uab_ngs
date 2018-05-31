@@ -1,9 +1,10 @@
 #!/bin/bash
-LONG_NAME="%.18i %.9P %.80j %.8u %.2t %.10M %.6D %R"
+LONG_NAME_o="%.19i %.9P %.80j %.8u %.2t %.10M %.6D %.4C %.7m %R"
+LONG_NAME_O="%.19jobid %.9partition %.80name %.8username %.2statecompact %.10timeused %.6numnodes %.4numcpus %.7minmemory %reasonlist"
 if [[ "$*" = *-o* || "$*" = *-l* ]]; then 
 	exec squeue -u $USER $*
 else
 	echo with long names
-	exec squeue -u $USER -o "$LONG_NAME" $*
+	exec squeue -u $USER -o "$LONG_NAME_o" $*
 fi
 
