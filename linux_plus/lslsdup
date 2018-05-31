@@ -1,0 +1,15 @@
+#!/bin/bash
+if [ "$1" == "-f" ]; then FACL=1; shift ; fi
+T=$(pwd -LP)
+if [ ! -z "$1" ]; then T=$1; fi
+while [ "$T" != '/' ]; do
+	if [ -z "$FACL" ]; then
+		# simple LS
+		ls -lsd $T
+	else
+		echo "#### $T ####"
+		getfacl $T
+	fi
+	T=$(dirname $T)
+done
+
