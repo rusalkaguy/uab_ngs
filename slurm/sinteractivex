@@ -1,0 +1,38 @@
+#!/bin/bash
+# 
+# Easy interactive shell
+#
+
+# defaults
+CPUSPERTASK=2
+MEMPERCPU=2
+HOURS=02
+PARTITION=interactive
+
+# usage/help
+if [[ "-h" == "$!" || "?" == "$!" || "help" == "$1" ]]; then 
+    echo "SYNTAX: $0 [CPUSperTASK] [MEMperCPU] [HOURS] [bash_args]"
+    echo "CPUSperTASK=$CPUSPERTASK"
+    echo "MEMperCPU=$MEMPERCPU"
+    echo "HOURS=$HOURS  # max = 2 for interactive"
+    exit 1
+fi
+
+# parse args
+if [ ! -z "$1" ]; then CPUSPERTASK=$1; shift 1; fi
+if [ ! -z "$1" ]; then MEMPERCPU=$1; shift 1; fi
+if [ ! -z "$1" ]; then HOURS=$1; shift 1; fi
+
+NAME=interactive_bash_${CPUSPERTASK}cores_${MEMPERCPU}G_each
+# -N1 means 1 node - no idea why we need this, but after 1/1/2017, we do
+ARGS="\
+    --ntasks=1 \
+    --cpus-per-task=${CPUSPERTASK} \
+    --mem-per-cpu=$(($MEMPERCPU*1024)) \
+    --time=${HOURS}:00:00 \
+    --partition=interactive \
+    --job-name=${NAME} \
+    $*"
+echo sinteractive "$ARGS"
+sinteractive $ARGS
+
