@@ -1,2 +1,9 @@
 #!/bin/bash
-exec squeue -u $USER
+LONG_NAME="%.18i %.9P %.60j %.8u %.2t %.10M %.6D %R"
+if [[ "$*" = *-o* || "$*" = *-l* ]]; then 
+	exec squeue -u $USER $*
+else
+	echo with long names
+	exec squeue -u $USER -o "$LONG_NAME" $*
+fi
+
