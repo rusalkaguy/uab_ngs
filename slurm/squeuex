@@ -1,5 +1,5 @@
 #!/bin/bash
-LONG_NAME="%.18i %.9P %.60j %.8u %.2t %.10M %.6D %R"
+LONG_NAME="%.18i %.9P %.80j %.8u %.2t %.10M %.6D %R"
 if [[ "$*" = *-o* || "$*" = *-l* ]]; then 
 	exec squeue -u $USER $*
 else
