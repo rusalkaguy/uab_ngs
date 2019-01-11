@@ -2,14 +2,19 @@
 if [ "$1" == "-f" ]; then FACL=1; shift ; fi
 T=$(pwd -LP)
 if [ ! -z "$1" ]; then T=$1; fi
-while [ "$T" != '/' ]; do
-	if [ -z "$FACL" ]; then
+if [ -z "$FACL" ]; then
+	# raw ls-ls version
+	(while [ "$T" != '/' ]; do
 		# simple LS
 		ls -lsd $T
-	else
+		T=$(dirname $T)
+	done) | column -t 
+else
+	# getfacl version
+	while [ "$T" != '/' ]; do
 		echo "#### $T ####"
 		getfacl $T
-	fi
-	T=$(dirname $T)
-done
+		T=$(dirname $T)
+	done
+fi
 
