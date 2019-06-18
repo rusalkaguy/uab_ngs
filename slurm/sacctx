@@ -1,0 +1,4 @@
+#!/bin/bash
+
+FORMAT='User,JobID,Jobname%30,partition,state,time,start,end,elapsed,ReqMem,MaxRss,MaxVMSize,ReqCPUS,nodelist,reservation'
+sacct --format=${FORMAT} $*
