@@ -1,0 +1,32 @@
+#!/usr/bin/bash
+#
+# ps_email PID [subject] 
+#
+# email when a PID terminates
+#
+SEC=30
+EMAIL=$USER@uab.edu
+
+if [ -z "$1" ]; then
+    echo "USAGE: $0 PID"
+    exit 1
+else
+    PID=$1
+    shift 1
+fi
+MSG="$*"
+
+echo "start: $MSG"
+DETAILS=$(echo "# pstree $PID"; pstree $PID; echo "#ps -lf $PID"; ps -lf $PID)
+ps -lf $PID
+
+while [ $? == "0" ]; do 
+    echo "sleeping $SEC"
+    sleep $SEC
+    ps -lf $PID
+done
+
+echo "$PID terminated"
+(echo "MESSAGE: $MSG"; echo "DETAILS: "; echo "$DETALS") | mail -s "ps $PID: $MSG" $EMAIL
+echo "email sent to $EMAIL"
+
