@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+#
+# get quota summary on several FILESETs 
+# in a condensed summary
+# tail -2 | get header and data line
+# sort -r | uniq # get only one header, at the top
+# column -t # re-justify columns, to account for length change from FILESET to real name
+
+# FILESET list
+FILESETS="ccts kimberly-lab kimberly-cser"
+(
+	for x in $FILESETS; do 
+	    /usr/lpp/mmfs/bin/mmlsquota --block-size=auto -v -j $x data | tail -2 | sed "s/FILESET/$x/";
+	done
+) \
+| column -t | sort -r | uniq
