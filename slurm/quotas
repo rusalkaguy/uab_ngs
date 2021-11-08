@@ -8,7 +8,7 @@
 # column -t # re-justify columns, to account for length change from FILESET to real name
 
 # FILESET list
-FILESETS="ccts kimberly-lab kimberly-cser"
+FILESETS="ccts kimberly-lab kimberly-cser leallab"
 (
 	for x in $FILESETS; do 
 	    /usr/lpp/mmfs/bin/mmlsquota --block-size=auto -v -j $x data | tail -2 | sed "s/FILESET/$x/";
