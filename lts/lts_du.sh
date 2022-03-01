@@ -4,11 +4,15 @@
 #
 # concise list of s3 bucket size
 #
+# uses rclone
 
 # parse arges
 export SERVICE="lts"
 if [ ! -z "$1" ]; then export SERVICE="$1";fi
 echo "# SERVICE=$SERVICE"
+
+# load rclone
+module load rclone
 
 # get list of top-level buckets
 export BUCKETS=$(rclone lsd $SERVICE:/ | awk '{printf $5" "}')
