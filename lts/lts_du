@@ -12,7 +12,7 @@ if [ ! -z "$1" ]; then export SERVICE="$1";fi
 echo "# SERVICE=$SERVICE"
 
 # load rclone
-module load rclone
+module load rclone/1.57.0
 
 # get list of top-level buckets
 export BUCKETS=$(rclone lsd $SERVICE:/ | awk '{printf $5" "}')
@@ -22,7 +22,10 @@ echo "# BUCKETS=$BUCKETS"
 (
 echo "BUCKET NAME OBJS BYES SIZE SIZE_U"
 ( for BUCKET in $BUCKETS; do 
-    echo $(rclone size $SERVICE:/$BUCKET) |awk -v NAME=$BUCKET 'BEGIN{OFS="\t";COUNT=3;SIZE=6;SIZEU=7;BYTES=8}{B=$BYTES;sub(/[^0-9]/,"",B);print "bucket",NAME, $COUNT, B, $SIZE, $SIZEU}'
+    # earlier version: rclone/1.49.5
+    #echo $(rclone size $SERVICE:/$BUCKET) |awk -v NAME=$BUCKET 'BEGIN{OFS="\t";COUNT=3;SIZE=6;SIZEU=7;BYTES=8}{B=$BYTES;sub(/[^0-9]/,"",B);print "bucket",NAME, $COUNT, B, $SIZE, $SIZEU}'
+    # latest version: rclone/1.57.0 - added field 2 - object_count with units
+    echo $(rclone size $SERVICE:/$BUCKET) |awk -v NAME=$BUCKET 'BEGIN{OFS="\t";COUNT=4;SIZE=7;SIZEU=8;BYTES=9}{B=$BYTES;sub(/[^0-9]/,"",B);CT=$COUNT;gsub(/[^0-9]/,"",CT);print "bucket",NAME, CT, B, $SIZE, $SIZEU}'
 done ) | sort -k3,3nr 
 ) | rev | column -t | rev
 
