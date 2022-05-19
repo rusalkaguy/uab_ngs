@@ -8,10 +8,19 @@
 # column -t # re-justify columns, to account for length change from FILESET to real name
 
 # FILESET list
-FILESETS="ccts kimberly-lab kimberly-cser leallab"
+echo "# /data/project/ "
+FILESETS="ccts kimberly-lab kimberly-cser leallab sloss"
 (
 	for x in $FILESETS; do 
 	    /usr/lpp/mmfs/bin/mmlsquota --block-size=auto -v -j $x data | tail -2 | sed "s/FILESET/$x/";
 	done
 ) \
 | column -t | sort -r | uniq
+
+echo "# /data/user/$USER:"
+( \
+  head -n 2 /data/.mmrepquota_user.log|tail -1 | sed -e 's/KB/blocks/' \
+  ; grep "^$USER" /data/.mmrepquota_user.log \
+  | awk '{printf($1 FS $2 FS $3 FS); printf("%2.1fT %2.1fT %2.1fT %2.1fT ",$4/1000000000.0,$5/1000000000.0,$6/1000000000.0,$7/1000000000.0);print($8,$9,$10,$11,$12,$13,$14)}' \
+) | column -t
+
