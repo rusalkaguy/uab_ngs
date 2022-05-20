@@ -9,7 +9,7 @@
 
 # FILESET list
 echo "# /data/project/ "
-FILESETS="ccts kimberly-lab kimberly-cser leallab sloss"
+FILESETS="ccts kimberly-lab kimberly-cser leallab sloss temporary-scratch"
 (
 	for x in $FILESETS; do 
 	    /usr/lpp/mmfs/bin/mmlsquota --block-size=auto -v -j $x data | tail -2 | sed "s/FILESET/$x/";
@@ -17,10 +17,14 @@ FILESETS="ccts kimberly-lab kimberly-cser leallab sloss"
 ) \
 | column -t | sort -r | uniq
 
-echo "# /data/user/$USER:"
+echo "# /data/user/$USER;/scratch/$USER"
 ( \
-  head -n 2 /data/.mmrepquota_user.log|tail -1 | sed -e 's/KB/blocks/' \
+  ( head -n 2 /data/.mmrepquota_user.log|tail -1)  \
+  | sed -e 's/KB/blocks/' \
   ; grep "^$USER" /data/.mmrepquota_user.log \
   | awk '{printf($1 FS $2 FS $3 FS); printf("%2.1fT %2.1fT %2.1fT %2.1fT ",$4/1000000000.0,$5/1000000000.0,$6/1000000000.0,$7/1000000000.0);print($8,$9,$10,$11,$12,$13,$14)}' \
+  ; grep "^$USER" /scratch/.mmrepquota_scratch.log \
+  | awk '{printf($1 FS "scratch" FS "TEMP" FS); printf("%2.1fT %2.1fT %2.1fT %2.1fT ",$3/10001000000.0,$4/1000000000.0,$5/1000000000.0,$6/1000000000.0);print($8,$9,$10,$11,$12,$13)}' \
+  ;
 ) | column -t
 
