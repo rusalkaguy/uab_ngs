@@ -1,0 +1,17 @@
+#!/bin/bash
+LONG_NAME_O="jobid:10,account:15,cpus-per-task:5,name:60,statecompact,tres-alloc:50"
+ONLY_ME="-u $USER"
+ADD_FLAGS=""
+
+if [[ "$*" = *--partition* || "$*" = *--reservation* ]]; then ONLY_ME=""; fi
+if [[ "$*" != *--partition* ]]; then ADD_FLAGS="--partition pascalnodes"; fi
+if [[ "$1" == "-a" ]]; then shift 1; ONLY_ME=""; fi
+
+if [[ "$*" = *-o* || "$*" = *-l* ]]; then 
+	echo "#" squeue $ONLY_ME $ADD_FLAGS $*
+	exec     squeue $ONLY_ME $ADD_FLAGS $*
+else
+	echo "#" squeue $ONLY_ME  $ADD_FLAGS -O "$LONG_NAME_O" $* \| sed -e 's/CPUS_N/CPUS N/' \| sort -k5,5r -k1,1n
+	exec     squeue $ONLY_ME  $ADD_FLAGS -O "$LONG_NAME_O" $*  | sed -e 's/CPUS_N/CPUS N/'  | sort -k5,5r -k1,1n
+fi
+

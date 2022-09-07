@@ -1,14 +1,16 @@
 #!/bin/bash
-LONG_NAME_o="%.19i %.9P %.80j %.8u %.2t %.10M %.6D %.4C %.7m %R %v"
+LONG_NAME_o="%.19i %.9P %.120j %.8u %.2t %.10M %.6D %.4C %.7m %.15R %v"
 LONG_NAME_O="%.19jobid %.9partition %.80name %.8username %.2statecompact %.10timeused %.6numnodes %.4numcpus %.7minmemory %reasonlist"
 ONLY_ME="-u $USER"
 
 if [[ "$*" = *--partition* || "$*" = *--reservation* ]]; then ONLY_ME=""; fi
+if [[ "$1" == "-a" ]]; then shift 1; ONLY_ME=""; fi
 
 if [[ "$*" = *-o* || "$*" = *-l* ]]; then 
+	echo "#" squeue $ONLY_ME $*
 	exec squeue $ONLY_ME $*
 else
-	echo with long names
-	exec squeue $ONLY_ME -o "$LONG_NAME_o" $*
+	echo "#" squeue $ONLY_ME -o "$LONG_NAME_o" $* | sort -k1,1n
+	exec     squeue $ONLY_ME -o "$LONG_NAME_o" $* | sort -k1,1n
 fi
 
