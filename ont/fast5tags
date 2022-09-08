@@ -1,0 +1,31 @@
+#!/usr/bin/bash
+#
+# fast5tags FILE.fast5
+#
+# extract tags from fast5 file (slow)
+#
+# see
+# https://bioinformatics.stackexchange.com/questions/7034/questions-regarding-nanopore-sequencing-analysis
+#
+if [ -z "$1" ]; then 
+   echo "ERROR: no arguments"
+   echo "SYNTAX: $0 FILE.fast5"
+   exit 1
+fi
+
+FILE=$1; shift
+
+module load h5py
+
+# 
+# get name of first read
+#
+READ_NAME=$(h5ls  $FILE | head -1 | cut -d " " -f 1)
+
+# 
+# get tags on that read
+# 
+h5dump -g /$READ_NAME/context_tags $FILE \
+       | awk -e '/ATTRIBUTE/{attr=$2};/\(0\):/{print attr,$2}' \
+       | sed -e 's/"//g' \
+       | column -t
