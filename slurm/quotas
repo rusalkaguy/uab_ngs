@@ -8,7 +8,7 @@
 # column -t # re-justify columns, to account for length change from FILESET to real name
 
 # FILESET list
-echo "# /data/project/ "
+echo "# /data/project/;/data/temporary-scratch/ "
 FILESETS="ccts kimberly-lab kimberly-cser leallab sloss temporary-scratch"
 (
 	for x in $FILESETS; do 
