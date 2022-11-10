@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+#
+# sinfo -  view information about Slurm nodes and partitions.
+# 
+echo 'sinfo -o "%20P%10c%15m%20l"'
+sinfo -o "%20P%10c%15m%20l"
+

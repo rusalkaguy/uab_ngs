@@ -1,10 +1,10 @@
 #!/bin/bash
-LONG_NAME_O="jobid:10,account:15,cpus-per-task:5,name:60,statecompact,tres-alloc:50"
+LONG_NAME_O="jobid:10,account:15,cpus-per-task:5,name:80,statecompact,tres-alloc:50,partition:20"
 ONLY_ME="-u $USER"
 ADD_FLAGS=""
 
 if [[ "$*" = *--partition* || "$*" = *--reservation* ]]; then ONLY_ME=""; fi
-if [[ "$*" != *--partition* ]]; then ADD_FLAGS="--partition pascalnodes"; fi
+if [[ "$*" != *--partition* ]]; then ADD_FLAGS="--partition pascalnodes,pascalnodes-medium"; fi
 if [[ "$1" == "-a" ]]; then shift 1; ONLY_ME=""; fi
 
 if [[ "$*" = *-o* || "$*" = *-l* ]]; then 

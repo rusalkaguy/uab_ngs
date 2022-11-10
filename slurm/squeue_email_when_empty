@@ -1,5 +1,7 @@
 #!/bin/bash
 #
+# squeue_email_when_empty [-n] FILTER [extra@server...] [subject]
+#
 # email me when qstat shows no jobs for me
 #
 # set up notification for individual jobs - if you want
@@ -17,6 +19,7 @@ done
 echo "EMAILS=$EMAILS"
 MESSAGE=done
 if [ -n "$2" ]; then MESSAGE="$*"; fi
+echo MESSAGE=$MESSAGE
 
 count_jobs() {
 	# %80j means 1st 80 characters of job name

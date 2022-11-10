@@ -10,11 +10,12 @@ HOURS=02
 PARTITION=interactive
 
 # usage/help
-if [[ "-h" == "$!" || "?" == "$!" || "help" == "$1" ]]; then 
+if [[ "-h" == "$1" || "?" == "$1" || "help" == "$1" || -z "$1" ]]; then 
     echo "SYNTAX: $0 [CPUSperTASK] [MEMperCPU] [HOURS] [bash_args]"
     echo "CPUSperTASK=$CPUSPERTASK"
     echo "MEMperCPU=$MEMPERCPU"
     echo "HOURS=$HOURS  # max = 2 for interactive"
+    echo "PARTITION=$PARTITION"
     exit 1
 fi
 
@@ -22,15 +23,16 @@ fi
 if [ ! -z "$1" ]; then CPUSPERTASK=$1; shift 1; fi
 if [ ! -z "$1" ]; then MEMPERCPU=$1; shift 1; fi
 if [ ! -z "$1" ]; then HOURS=$1; shift 1; fi
+if [ ! -z "$1" ]; then PARTITION=$1; shift 1; fi
 
-NAME=interactive_bash_${CPUSPERTASK}cores_${MEMPERCPU}G_each
+NAME=sint_${CPUSPERTASK}cores_${MEMPERCPU}G_each_${HOURS}hours
 # -N1 means 1 node - no idea why we need this, but after 1/1/2017, we do
 ARGS="\
     --ntasks=1 \
     --cpus-per-task=${CPUSPERTASK} \
     --mem-per-cpu=$(($MEMPERCPU*1024)) \
     --time=${HOURS}:00:00 \
-    --partition=interactive \
+    --partition=${PARTITION} \
     --job-name=${NAME} \
     $*"
 echo sinteractive "$ARGS"
