@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#
+# du -s, but sorted by size, AND human readable
+#
+exec du -sb $* | sort -k1,1nr | numfmt --from=none --to=si | column -t
