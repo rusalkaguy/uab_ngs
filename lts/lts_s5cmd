@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#
+# s5cmd wrapper (uses docker)
+#
+# Docker/Singularity failed: https://github.com/peak/s5cmd#docker
+# Use conda
+
+# env
+if [[ -z "$(which s5cmd  2>/dev/null)" ]]; then 
+    if [[ -z "$(which conda 2>/dev/null)" ]]; then 
+       echo module load Anaconda3
+	    module load Anaconda3
+    fi
+    echo conda activate s5cmd
+         conda activate s5cmd
+fi
+
+LTS_ENDPOINT=https://s3.lts.rc.uab.edu/
+LTS_PROFILE=LTS
+AWS_CRED_FILE=~/.aws/credentials
+# check for credentials
+if [ -z "$(grep "[${LTS_PROFILE}]" $AWS_CRED_FILE 2>/dev/null)" ]; then
+    echo "ERROR: no [LTS] section found in $AWS_CRED_FILE/"
+    echo "ERROR: add [LTS] section with 'aws_access_key_id = ' & 'aws_secret_access_key = ' lines"
+    exit 1
+fi
+
+# --stat shows total files transferred, failed, successful, at the end of the job
+# --numworkers=$SLURM_CPUS_ON_NODE is perfect for a single-node job
+# --endpoint-url=https://s3.lts.rc.uab.edu/ is required for our S3 endpoint
+# --profile=LTS uses the secret/key in ~/.aws/credentials [LTS] aws_access_key_id & aws_secret_access_key
+
+echo s5cmd --profile=LTS --numworkers=${SLURM_CPUS_ON_NODE:-1} --endpoint-url=$LTS_ENDPOINT $*
+exec s5cmd --profile=LTS --numworkers=${SLURM_CPUS_ON_NODE:-1} --endpoint-url=$LTS_ENDPOINT $*   
