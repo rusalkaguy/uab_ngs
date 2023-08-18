@@ -12,7 +12,10 @@ if [ ! -z "$1" ]; then export SERVICE="$1";fi
 echo "# SERVICE=$SERVICE"
 
 # load rclone
-module load rclone/1.57.0
+if [ -z $(which rclone 2> /dev/null) ]; then
+	echo module load rclone/1.57.0
+	module load rclone/1.57.0
+fi
 
 # get list of top-level buckets
 export BUCKETS=$(rclone lsd $SERVICE:/ | awk '{printf $5" "}')
