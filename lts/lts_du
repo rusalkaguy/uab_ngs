@@ -29,6 +29,13 @@ if [ -z $(which rclone 2> /dev/null) ]; then
 	module load rclone/1.57.0
 fi
 
+# check if the endpoint is in the config file
+if [[ -z "$(rclone listremotes | egrep '^'${SERVICE}':')" ]]; then
+	echo "ERROR: endpoint '$SERVICE' not defined in rclone config"
+	echo "ERROR: you must create the endpoint with 'rclone config' before using $0"
+	exit 1
+fi
+
 # get list of top-level buckets
 if [[ -z "$BUCKETS" ]]; then
 	echo "Query bucket list: rclone lsd ${SERVICE}:/"
