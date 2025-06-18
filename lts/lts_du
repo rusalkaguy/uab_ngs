@@ -1,15 +1,27 @@
 #!/usr/bin/env bash
 #
-# lts_du [lts:/]
+# lts_du [lts:/] [bucket_name [bucket_name2]]
 #
 # concise list of s3 bucket size
 #
 # uses rclone
 
 # parse arges
+if [[ "$1" = -h* ]]; then
+	echo "SYNTAX: lts_du [lts:/] [bucket_name [bucket_name2]]"
+	echo " "
+	echo "USes rclone to list the sizes of buckets at an endpoint"
+	echo "By default, lists all buckets in the default partition for the endpoint (rclone lsd)"
+	exit 1
+fi
 export SERVICE="lts"
-if [ ! -z "$1" ]; then export SERVICE="$1";fi
+if [ ! -z "$1" ]; then export SERVICE="$1"; shift; fi
 echo "# SERVICE=$SERVICE"
+export BUCKETS=""
+if [ ! -z "$1" ]; then 
+	export BUCKETS="$*"
+	echo "# BUCKETS=$BUCKETS"
+fi
 
 # load rclone
 if [ -z $(which rclone 2> /dev/null) ]; then
@@ -18,8 +30,11 @@ if [ -z $(which rclone 2> /dev/null) ]; then
 fi
 
 # get list of top-level buckets
-export BUCKETS=$(rclone lsd $SERVICE:/ | awk '{printf $5" "}')
-echo "# BUCKETS=$BUCKETS"
+if [[ -z "$BUCKETS" ]]; then
+	echo "Query bucket list: rclone lsd ${SERVICE}:/"
+	export BUCKETS=$(rclone lsd ${SERVICE}:/ | awk '{printf $5" "}')
+	echo "# BUCKETS=$BUCKETS"
+fi
 
 # get sizes for all buckets
 (
@@ -29,7 +44,7 @@ echo "BUCKET NAME OBJS BYES SIZE SIZE_U"
     #echo $(rclone size $SERVICE:/$BUCKET) |awk -v NAME=$BUCKET 'BEGIN{OFS="\t";COUNT=3;SIZE=6;SIZEU=7;BYTES=8}{B=$BYTES;sub(/[^0-9]/,"",B);print "bucket",NAME, $COUNT, B, $SIZE, $SIZEU}'
     # latest version: rclone/1.57.0 - added field 2 - object_count with units
     echo $(rclone size $SERVICE:/$BUCKET) |awk -v NAME=$BUCKET 'BEGIN{OFS="\t";COUNT=4;SIZE=7;SIZEU=8;BYTES=9}{B=$BYTES;sub(/[^0-9]/,"",B);CT=$COUNT;gsub(/[^0-9]/,"",CT);print "bucket",NAME, CT, B, $SIZE, $SIZEU}'
-done ) | sort -k3,3nr 
+done ) | sort -k4,4nr 
 ) | rev | column -t | rev
 
 
